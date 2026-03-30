@@ -1,0 +1,113 @@
+version: 2
+
+sources:
+  - name: bronze
+    description: >
+      Bronze layer containing raw ingested healthcare data in the li_ws Unity Catalog.
+      These tables represent the initial landing zone for source data with minimal
+      transformations — data types are preserved as-is from the source systems.
+    database: li_ws
+    schema: bronze
+    tables:
+      - name: patient_outcomes
+        description: >
+          Raw patient encounter records capturing admission, discharge, and outcome
+          data. Each row represents one patient stay at a hospital. Discharge date
+          may be NULL for currently active (admitted) patients. Patient ID and
+          hospital ID may occasionally be NULL due to upstream data quality issues.
+        columns:
+          - name: patient_id
+            description: >
+              Unique identifier for the patient (e.g. PAT_20001). May be NULL in
+              rare upstream data quality failures — treated as a not-null warning
+              in staging.
+            data_tests:
+              - not_null:
+                  config:
+                    severity: warn
+
+          - name: admission_date
+            description: Date the patient was admitted to hospital.
+            data_tests:
+              - not_null
+
+          - name: discharge_date
+            description: >
+              Date the patient was discharged. NULL when patient_status = 'ACTIVE'
+              (patient is still admitted). Expected to be NULL for active patients
+              and non-NULL for discharged patients.
+
+          - name: hospital_id
+            description: >
+              Foreign key to hospital_master. Identifies which hospital the patient
+              stay occurred at (e.g. HOSP_0001). May be NULL in rare edge cases.
+            data_tests:
+              - not_null:
+                  config:
+                    severity: warn
+              - relationships:
+                  arguments:
+                    to: source('bronze', 'hospital_master')
+                    field: hospital_id
+                  config:
+                    severity: warn
+
+          - name: readmission_rate
+            description: >
+              Readmission risk rate expressed as a percentage (0.00–100.00).
+              A value of 0.00 for ACTIVE patients indicates no prior readmission
+              history on record.
+
+          - name: patient_status
+            description: >
+              Current status of the patient encounter.
+              Known values: DISCHARGED, ACTIVE, UNKNOWN_STATUS.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['DISCHARGED', 'ACTIVE', 'UNKNOWN_STATUS']
+                  config:
+                    severity: warn
+
+      - name: hospital_master
+        description: >
+          Reference / dimension table containing one row per hospital. Provides
+          facility metadata including name, state, bed capacity, and geographic
+          region. Used as the authoritative list of hospitals in the network.
+        columns:
+          - name: hospital_id
+            description: >
+              Primary key for the hospital (e.g. HOSP_0001). Uniquely identifies
+              a hospital facility.
+            data_tests:
+              - not_null
+              - unique
+
+          - name: hospital_name
+            description: Full legal name of the hospital facility.
+            data_tests:
+              - not_null
+
+          - name: hospital_state
+            description: Two-letter US state abbreviation where the hospital is located.
+            data_tests:
+              - not_null
+
+          - name: num_beds
+            description: Total licensed inpatient bed capacity of the hospital.
+            data_tests:
+              - not_null
+
+          - name: region
+            description: >
+              US geographic region grouping for the hospital.
+              Known values: Northeast, Midwest, Mid-Atlantic, West, South.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['Northeast', 'Midwest', 'Mid-Atlantic', 'West', 'South',
+                             'Southeast', 'Southwest', 'Mountain', 'Pacific']
+                  config:
+                    severity: warn
