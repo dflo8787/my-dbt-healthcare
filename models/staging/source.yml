@@ -111,3 +111,556 @@ sources:
                              'Southeast', 'Southwest', 'Mountain', 'Pacific']
                   config:
                     severity: warn
+
+      - name: patients
+        description: >
+          Patient demographic and insurance reference table. One row per patient.
+          Captures date of birth, age, gender, race, insurance details, and the
+          patient's primary hospital affiliation. active_flag indicates whether
+          the patient record is currently active in the source system.
+        columns:
+          - name: patient_id
+            description: >
+              Primary key for the patient (e.g. PAT_20001). Uniquely identifies
+              a patient across all clinical and claims tables.
+            data_tests:
+              - not_null
+              - unique
+
+          - name: first_name
+            description: Patient given name as recorded in the source system.
+            data_tests:
+              - not_null
+
+          - name: last_name
+            description: Patient family name as recorded in the source system.
+            data_tests:
+              - not_null
+
+          - name: date_of_birth
+            description: Patient date of birth. Used to validate age and eligibility.
+            data_tests:
+              - not_null
+
+          - name: age
+            description: Patient age in years as of the record creation date.
+
+          - name: gender
+            description: >
+              Patient gender as reported in the source system.
+              Known values: M, F, MALE, FEMALE, OTHER, UNKNOWN.
+            data_tests:
+              - not_null
+
+          - name: race
+            description: Patient race as self-reported or recorded in the source system.
+
+          - name: insurance_type
+            description: >
+              Type of insurance coverage held by the patient.
+              Known values: MEDICARE, MEDICAID, COMMERCIAL, SELF_PAY, OTHER.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['MEDICARE', 'Medicaid', 'MEDICAID', 'Commercial',
+                             'COMMERCIAL', 'SELF_PAY', 'Self-Pay', 'OTHER']
+                  config:
+                    severity: warn
+
+          - name: insurance_id
+            description: Insurance member ID or policy number.
+
+          - name: primary_hospital_id
+            description: >
+              Foreign key to hospital_master. The hospital primarily associated
+              with this patient's care.
+            data_tests:
+              - relationships:
+                  arguments:
+                    to: source('bronze', 'hospital_master')
+                    field: hospital_id
+                  config:
+                    severity: warn
+
+          - name: zip_code
+            description: Patient residential ZIP code (stored as integer in source).
+
+          - name: state
+            description: Two-letter US state abbreviation for the patient's residence.
+            data_tests:
+              - not_null
+
+          - name: active_flag
+            description: >
+              Indicates whether the patient record is currently active.
+              Known values: Y, N.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['Y', 'N']
+                  config:
+                    severity: warn
+
+          - name: created_date
+            description: Date the patient record was created in the source system.
+            data_tests:
+              - not_null
+
+          - name: updated_date
+            description: Date the patient record was last updated in the source system.
+
+      - name: providers
+        description: >
+          Provider (clinician) reference table. One row per provider. Captures
+          name, specialty, NPI, hospital affiliation, insurance acceptance flags,
+          years of experience, and active status.
+        columns:
+          - name: provider_id
+            description: >
+              Primary key for the provider (e.g. PROV_001). Uniquely identifies
+              a clinician across all clinical tables.
+            data_tests:
+              - not_null
+              - unique
+
+          - name: first_name
+            description: Provider given name.
+            data_tests:
+              - not_null
+
+          - name: last_name
+            description: Provider family name.
+            data_tests:
+              - not_null
+
+          - name: specialty
+            description: Clinical specialty of the provider (e.g. Cardiology, Orthopedics).
+            data_tests:
+              - not_null
+
+          - name: npi
+            description: >
+              National Provider Identifier — a unique 10-digit numeric identifier
+              assigned by CMS. Stored as bigint in source.
+            data_tests:
+              - not_null
+              - unique
+
+          - name: hospital_id
+            description: >
+              Foreign key to hospital_master. The hospital where the provider is
+              primarily affiliated.
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('bronze', 'hospital_master')
+                    field: hospital_id
+                  config:
+                    severity: warn
+
+          - name: accepts_medicare
+            description: >
+              Whether the provider accepts Medicare patients.
+              Known values: Y, N.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['Y', 'N']
+                  config:
+                    severity: warn
+
+          - name: accepts_medicaid
+            description: >
+              Whether the provider accepts Medicaid patients.
+              Known values: Y, N.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['Y', 'N']
+                  config:
+                    severity: warn
+
+          - name: years_experience
+            description: Number of years the provider has been in clinical practice.
+
+          - name: active_flag
+            description: >
+              Indicates whether the provider record is currently active.
+              Known values: Y, N.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['Y', 'N']
+                  config:
+                    severity: warn
+
+          - name: created_date
+            description: Date the provider record was created in the source system.
+            data_tests:
+              - not_null
+
+      - name: encounters
+        description: >
+          Clinical encounter (visit) records. One row per encounter. Links patients
+          to providers and hospitals for a given visit. Captures encounter type,
+          primary diagnosis, admission/discharge dates, length of stay, and
+          readmission flag.
+        columns:
+          - name: encounter_id
+            description: >
+              Primary key for the encounter (e.g. ENC_10001). Uniquely identifies
+              a clinical visit.
+            data_tests:
+              - not_null
+              - unique
+
+          - name: patient_id
+            description: Foreign key to patients. The patient associated with this encounter.
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('bronze', 'patients')
+                    field: patient_id
+                  config:
+                    severity: warn
+
+          - name: provider_id
+            description: Foreign key to providers. The provider who managed this encounter.
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('bronze', 'providers')
+                    field: provider_id
+                  config:
+                    severity: warn
+
+          - name: hospital_id
+            description: Foreign key to hospital_master. The facility where the encounter occurred.
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('bronze', 'hospital_master')
+                    field: hospital_id
+                  config:
+                    severity: warn
+
+          - name: encounter_date
+            description: Date the encounter began (admission date for inpatient stays).
+            data_tests:
+              - not_null
+
+          - name: encounter_type
+            description: >
+              Category of the clinical encounter.
+              Known values: INPATIENT, OUTPATIENT, EMERGENCY, OBSERVATION.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['INPATIENT', 'Inpatient', 'OUTPATIENT', 'Outpatient',
+                             'EMERGENCY', 'Emergency', 'OBSERVATION', 'Observation']
+                  config:
+                    severity: warn
+
+          - name: primary_diagnosis
+            description: >
+              Free-text primary diagnosis description for the encounter.
+            data_tests:
+              - not_null
+
+          - name: discharge_date
+            description: >
+              Date the patient was discharged. May be NULL for still-active encounters.
+
+          - name: length_of_stay_days
+            description: >
+              Length of stay in days as recorded by the source system. May be NULL
+              for outpatient or same-day encounters.
+
+          - name: admit_source
+            description: >
+              Source of patient admission (e.g. EMERGENCY_ROOM, PHYSICIAN_REFERRAL).
+            data_tests:
+              - not_null
+
+          - name: discharge_disposition
+            description: >
+              Destination or status at time of discharge (e.g. HOME, SNF, EXPIRED).
+            data_tests:
+              - not_null
+
+          - name: readmission_30day_flag
+            description: >
+              Whether the encounter resulted in a readmission within 30 days.
+              Known values: Y, N.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['Y', 'N']
+                  config:
+                    severity: warn
+
+          - name: created_date
+            description: Date the encounter record was created in the source system.
+            data_tests:
+              - not_null
+
+      - name: medical_claims
+        description: >
+          Medical claims records submitted for patient encounters. One row per claim.
+          Captures billed, allowed, paid, and patient-responsibility amounts alongside
+          claim status and denial reason. Used for financial and reimbursement analytics.
+        columns:
+          - name: claim_id
+            description: >
+              Primary key for the claim (e.g. CLM_30001). Uniquely identifies
+              a submitted medical claim.
+            data_tests:
+              - not_null
+              - unique
+
+          - name: encounter_id
+            description: Foreign key to encounters. The clinical encounter this claim covers.
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('bronze', 'encounters')
+                    field: encounter_id
+                  config:
+                    severity: warn
+
+          - name: patient_id
+            description: Foreign key to patients.
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('bronze', 'patients')
+                    field: patient_id
+                  config:
+                    severity: warn
+
+          - name: provider_id
+            description: Foreign key to providers.
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('bronze', 'providers')
+                    field: provider_id
+                  config:
+                    severity: warn
+
+          - name: hospital_id
+            description: Foreign key to hospital_master.
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('bronze', 'hospital_master')
+                    field: hospital_id
+                  config:
+                    severity: warn
+
+          - name: claim_date
+            description: Date the claim was submitted to the payer.
+            data_tests:
+              - not_null
+
+          - name: service_date
+            description: Date the service was rendered.
+            data_tests:
+              - not_null
+
+          - name: insurance_type
+            description: >
+              Insurance type for this claim.
+              Known values: MEDICARE, MEDICAID, COMMERCIAL, SELF_PAY, OTHER.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['MEDICARE', 'Medicaid', 'MEDICAID', 'Commercial',
+                             'COMMERCIAL', 'SELF_PAY', 'Self-Pay', 'OTHER']
+                  config:
+                    severity: warn
+
+          - name: primary_diagnosis_code
+            description: ICD-10 diagnosis code for the primary diagnosis on this claim.
+            data_tests:
+              - not_null
+
+          - name: primary_diagnosis_desc
+            description: Text description of the primary diagnosis code.
+
+          - name: procedure_code
+            description: CPT or HCPCS procedure code for the billed service.
+            data_tests:
+              - not_null
+
+          - name: procedure_desc
+            description: Text description of the procedure code.
+
+          - name: billed_amount
+            description: Total amount billed to the payer by the provider.
+            data_tests:
+              - not_null
+
+          - name: allowed_amount
+            description: Amount the payer has contractually allowed for the service.
+
+          - name: paid_amount
+            description: Amount actually paid by the payer.
+
+          - name: patient_responsibility
+            description: Portion of the billed amount owed by the patient (copay, deductible, coinsurance).
+
+          - name: claim_status
+            description: >
+              Current status of the claim.
+              Known values: PAID, DENIED, PENDING, ADJUSTED.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['PAID', 'Paid', 'DENIED', 'Denied', 'PENDING',
+                             'Pending', 'ADJUSTED', 'Adjusted']
+                  config:
+                    severity: warn
+
+          - name: denial_reason
+            description: >
+              Reason code or description when claim_status = DENIED. NULL for
+              non-denied claims.
+
+          - name: created_date
+            description: Date the claim record was created in the source system.
+            data_tests:
+              - not_null
+
+      - name: medications
+        description: >
+          Medication prescription records associated with patient encounters.
+          One row per medication order. Captures drug name, dosage, frequency,
+          supply duration, refill authorization, adherence, and cost information.
+        columns:
+          - name: medication_id
+            description: >
+              Primary key for the medication record (e.g. MED_40001). Uniquely
+              identifies a prescription order.
+            data_tests:
+              - not_null
+              - unique
+
+          - name: encounter_id
+            description: Foreign key to encounters. The encounter during which this medication was prescribed.
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('bronze', 'encounters')
+                    field: encounter_id
+                  config:
+                    severity: warn
+
+          - name: patient_id
+            description: Foreign key to patients.
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('bronze', 'patients')
+                    field: patient_id
+                  config:
+                    severity: warn
+
+          - name: provider_id
+            description: Foreign key to providers. The prescribing provider.
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('bronze', 'providers')
+                    field: provider_id
+                  config:
+                    severity: warn
+
+          - name: medication_name
+            description: Name of the prescribed medication.
+            data_tests:
+              - not_null
+
+          - name: dosage
+            description: Dosage amount and unit (e.g. 10mg, 500mg).
+
+          - name: frequency
+            description: >
+              How often the medication is to be taken (e.g. DAILY, BID, TID, PRN).
+            data_tests:
+              - not_null
+
+          - name: indication
+            description: Clinical indication or reason the medication was prescribed.
+
+          - name: prescribed_date
+            description: Date the medication was prescribed.
+            data_tests:
+              - not_null
+
+          - name: end_date
+            description: >
+              Date the prescription is expected to end. May be NULL for open-ended
+              prescriptions.
+
+          - name: days_supply
+            description: Number of days the dispensed quantity is intended to last.
+            data_tests:
+              - not_null
+
+          - name: refills_authorized
+            description: Number of refills authorized by the prescribing provider.
+
+          - name: adherence_flag
+            description: >
+              Whether the patient is adherent to the medication regimen.
+              Known values: Y, N.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['Y', 'N']
+                  config:
+                    severity: warn
+
+          - name: generic_flag
+            description: >
+              Whether a generic formulation was dispensed.
+              Known values: Y, N.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['Y', 'N']
+                  config:
+                    severity: warn
+
+          - name: cost_per_unit
+            description: Cost per unit of the medication in USD.
+            data_tests:
+              - not_null
+
+          - name: created_date
+            description: Date the medication record was created in the source system.
+            data_tests:
+              - not_null
