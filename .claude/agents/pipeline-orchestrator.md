@@ -71,6 +71,20 @@ You never skip steps. You never proceed after a FAIL.
    🧪 Tests: /.agent/artifacts/TEST_REPORT.md
    🔗 PR: [url]
 
+## PHASE 6 — DBT RUN (Post-Merge)
+1. Confirm PR has been merged to master
+2. Run: git pull origin master
+3. Invoke dbt-runner-agent agent
+4. Wait for /.agent/artifacts/DBT_RUN_REPORT.md
+5. Read DBT_RUN_REPORT.md:
+   - STATUS: FAIL → write to execution_log.md FAIL → alert human
+   - STATUS: PASS → continue
+6. Write to logs/execution_log.md:
+   [TIMESTAMP] | PHASE 6 | dbt-runner | COMPLETE | Silver tables live
+7. Output final confirmation:
+   ✅ Silver tables now available in Databricks
+   📊 See DBT_RUN_REPORT.md for row counts
+
 ## Rules
 - Never skip a phase
 - Never proceed after FAIL
