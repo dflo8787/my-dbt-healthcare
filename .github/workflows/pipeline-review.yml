@@ -1,0 +1,61 @@
+name: Data Pipeline Review Gate
+
+on:
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'models/**'
+      - 'tests/**'
+      - 'dbt_project.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  dbt_compile:
+    name: dbt Compile Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dbt
+        run: pip install dbt-databricks
+      - name: Compile dbt models
+        run: dbt compile --profiles-dir .
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_PAT }}
+
+  policy_check:
+    name: Pipeline Policy Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for disallowed patterns
+        run: |
+          echo "Scanning for disallowed SQL patterns..."
+          if grep -r "DROP TABLE\|DELETE FROM\|TRUNCATE\|ALTER TABLE" models/; then
+            echo "❌ BLOCKED: Disallowed pattern detected"
+            exit 1
+          else
+            echo "✅ No disallowed patterns found"
+          fi
+      - name: Check Gold model protection
+        run: |
+          GOLD_CHANGES=$(git diff --name-only origin/master...HEAD \
+            | grep "models/gold/" || true)
+          if [ -n "$GOLD_CHANGES" ]; then
+            echo "⚠️ Gold model changes detected - requires manual approval"
+            echo "$GOLD_CHANGES"
+          fi
+
+  review_gate:
+    name: Pipeline Review Gate
+    needs: [dbt_compile, policy_check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gate Status
+        run: |
+          echo "✅ All pipeline checks passed"
+          echo "Ready for human review and merge approval"

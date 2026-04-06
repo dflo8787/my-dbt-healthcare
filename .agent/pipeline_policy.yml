@@ -1,0 +1,40 @@
+# Data Pipeline Governance Policy
+
+must_pass_checks:
+  - dbt_compile
+  - dbt_test
+  - quality_scan_pass
+
+high_risk_changes:
+  - models/gold/**
+  - dbt_project.yml
+  - profiles.yml
+  - .claude/settings.json
+
+disallowed_patterns:
+  - "DROP TABLE"
+  - "DELETE FROM"
+  - "ALTER TABLE"
+  - "TRUNCATE"
+
+promotion_rules:
+  bronze_to_silver:
+    requires: quality_scan_pass
+    autonomy: auto
+  silver_to_gold:
+    requires: human_approval
+    autonomy: manual
+  pr_merge_to_master:
+    requires: human_approval
+    autonomy: manual
+
+autonomy_levels:
+  low_risk:
+    actions: [read_bronze, profile_tables, compile_models, run_dbt_tests]
+    approval: auto
+  medium_risk:
+    actions: [write_quality_report, create_branch, open_pr]
+    approval: auto_with_log
+  high_risk:
+    actions: [promote_to_gold, merge_to_master, alter_schema]
+    approval: human_required

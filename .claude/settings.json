@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Write(./models/**)",
+      "Write(./logs/**)",
+      "Write(./reports/**)",
+      "Bash(dbt compile*)",
+      "Bash(dbt run*)",
+      "Bash(dbt test*)",
+      "Bash(dbt build*)",
+      "Bash(git status*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git checkout*)",
+      "Bash(git push*)",
+      "Bash(gh pr create*)",
+      "Bash(gh pr view*)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git merge*)",
+      "Bash(gh pr merge*)",
+      "Bash(DROP*)",
+      "Bash(DELETE*)",
+      "Bash(ALTER TABLE*)"
+    ]
+  }
+}
