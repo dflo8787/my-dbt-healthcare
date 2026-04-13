@@ -353,6 +353,16 @@ If Databricks MCP fails in Phase 1:
    📋 Full run log:  logs/execution_log.md
    ```
 
+## PHASE 11 — PIPELINE INTELLIGENCE (Post Every Run)
+1. Invoke pipeline-intelligence-manager agent in MODE A
+2. Wait for /.agent/artifacts/DAILY_EXECUTIVE_BRIEF.md
+3. Read DAILY_EXECUTIVE_BRIEF.md — note overall health status
+4. Write to logs/execution_log.md:
+   [TIMESTAMP] | PHASE 11 | pipeline-intelligence-manager | COMPLETE | Health: [status]
+5. Output to terminal:
+   📊 Daily Brief:    /.agent/artifacts/DAILY_EXECUTIVE_BRIEF.md
+   📈 Analytics Log:  /.agent/artifacts/PIPELINE_ANALYTICS_LOG.csv
+   🏥 Overall Health: [🟢 HEALTHY | 🟡 WARNING | 🔴 CRITICAL]
 ---
 
 ## ESCALATION FORMAT
@@ -452,3 +462,6 @@ Example log entries:
 - Gold Phase 9 ALWAYS requires explicit human APPROVE before any Gold commit
 - Two human actions exist: Merge 1 (Silver PR) and Merge 2 (Gold PR after APPROVE)
 - HUMAN_ESCALATION_REPORT.md must be actionable — human should not need to ask questions
+- Phase 11 always runs after Phase 8 completes — never skip it
+- pipeline-intelligence-manager NEVER executes dbt, git, or Databricks writes
+- If DAILY_EXECUTIVE_BRIEF.md is not generated — log WARNING and continue
