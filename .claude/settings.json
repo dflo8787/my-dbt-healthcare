@@ -23,7 +23,9 @@
       "Bash(gh pr merge*)",
       "Bash(DROP*)",
       "Bash(DELETE*)",
-      "Bash(ALTER TABLE*)"
+      "Bash(ALTER TABLE*)",
+      "Task(pipeline-intelligence-manager→dbt*)",
+      "Task(pipeline-intelligence-manager→git*)"
     ]
   }
 }
