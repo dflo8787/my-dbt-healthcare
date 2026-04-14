@@ -363,6 +363,15 @@ If Databricks MCP fails in Phase 1:
    📊 Daily Brief:    /.agent/artifacts/DAILY_EXECUTIVE_BRIEF.md
    📈 Analytics Log:  /.agent/artifacts/PIPELINE_ANALYTICS_LOG.csv
    🏥 Overall Health: [🟢 HEALTHY | 🟡 WARNING | 🔴 CRITICAL]
+
+
+### Phase 12 — Write to Databricks Pipeline Ops Tables
+Invoke: pipeline-ops-writer agent
+Trigger: After Phase 11 pipeline-intelligence-manager completes
+Action: Agent reads all artifacts and writes structured rows
+        to li_ws.pipeline_ops tables in Databricks
+Output: 13 tables populated, row count verification logged
+Log:    [TIMESTAMP] | PHASE 12 | pipeline-ops-writer | COMPLETE
 ---
 
 ## ESCALATION FORMAT
