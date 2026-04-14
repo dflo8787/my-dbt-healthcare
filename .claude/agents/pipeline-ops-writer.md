@@ -296,27 +296,27 @@ INSERT INTO li_ws.intelligence_layer.execution_log VALUES (
 ## STEP 4 — Write intelligence_layer.quality_reports
 
 Read: .agent/artifacts/BRONZE_QUALITY_REPORT.md
-Insert one row with layer='BRONZE', scan_type='PRE_BUILD':
+Insert one row with scan_type='BRONZE_INITIAL_FINDINGS':
 ```sql
 INSERT INTO li_ws.intelligence_layer.quality_reports VALUES (
-  '[run_date]', '[run_id]', 'PRE_BUILD', 'BRONZE', 'ALL_7_TABLES',
+  '[run_date]', '[run_id]', 'BRONZE_INITIAL_FINDINGS', 'BRONZE', 'ALL_7_TABLES',
   '[overall_status]', [issue_count], [fix_count],
   '[issues_summary]', '[fix_ids_comma_separated]', current_timestamp()
 );
 ```
 
 Read: .agent/artifacts/TEST_REPORT.md
-Insert one row per model with layer='SILVER', scan_type='POST_BUILD':
+Insert one row per model with scan_type='SILVER_VALIDATION_RESULTS':
 ```sql
 INSERT INTO li_ws.intelligence_layer.quality_reports VALUES (
-  '[run_date]', '[run_id]', 'POST_BUILD', 'SILVER', '[model_name]',
+  '[run_date]', '[run_id]', 'SILVER_VALIDATION_RESULTS', 'SILVER', '[model_name]',
   '[status]', [fail_count], [fix_count],
   '[test_summary]', '[fix_ids_verified]', current_timestamp()
 );
 ```
 
 If .agent/artifacts/GOLD_TEST_REPORT.md exists:
-Insert one row with layer='GOLD', scan_type='POST_BUILD'.
+Insert one row with scan_type='GOLD_VALIDATION_RESULTS', layer='GOLD'.
 
 ---
 
