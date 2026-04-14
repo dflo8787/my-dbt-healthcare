@@ -1,2 +1,3 @@
 run_date,run_timestamp,total_phases,phases_completed,tables_scanned,models_created,tests_passed,tests_warned,tests_failed,retry_count,escalation_count,p0_events,p1_events,p2_events,p3_events,bronze_rows_total,silver_rows_total,run_duration_minutes,pr_url,overall_health
 2026-04-14,2026-04-14T12:00:00Z,8,8,5,7,87,10,0,0,0,0,0,2,1,1650,1671,0.45,,HEALTHY
+2026-04-14,2026-04-14T21:02:00Z,12,12,7,10,92,23,0,0,0,0,0,2,1,1721,1746,2.5,https://github.com/dflo8787/my-dbt-healthcare/pull/5,HEALTHY
