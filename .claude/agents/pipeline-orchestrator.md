@@ -365,12 +365,13 @@ If Databricks MCP fails in Phase 1:
    🏥 Overall Health: [🟢 HEALTHY | 🟡 WARNING | 🔴 CRITICAL]
 
 
-### Phase 12 — Write to Databricks Pipeline Ops Tables
+### Phase 12 — Write to Databricks Intelligence and Second Brain Tables
 Invoke: pipeline-ops-writer agent
 Trigger: After Phase 11 pipeline-intelligence-manager completes
-Action: Agent reads all artifacts and writes structured rows
-        to li_ws.pipeline_ops tables in Databricks
-Output: 13 tables populated, row count verification logged
+Action: Reads all artifacts and writes structured rows to:
+        li_ws.intelligence_layer (13 tables — operational pipeline data)
+        li_ws.second_brain (4 tables — accumulated institutional knowledge)
+Output: 17 tables populated, row count verification query run
 Log:    [TIMESTAMP] | PHASE 12 | pipeline-ops-writer | COMPLETE
 ---
 
