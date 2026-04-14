@@ -1,1 +1,6 @@
-{"tasks": ["stg_patients", "stg_providers", "stg_encounters", "stg_medical_claims", "stg_medications"]}
+{
+  "silver_tasks": ["stg_patients", "stg_providers", "stg_encounters", "stg_medical_claims", "stg_medications"],
+  "gold_tasks": [],
+  "excluded_tables": [],
+  "exclusion_reason": null
+}
