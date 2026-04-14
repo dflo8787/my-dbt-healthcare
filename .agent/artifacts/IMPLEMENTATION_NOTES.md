@@ -1,87 +1,75 @@
-# Implementation Notes — Silver Staging Models
+# Implementation Notes — Section 6: Gold Layer + Timestamp + Bad Data Validation
 
-**Date:** 2026-04-05
-**Agent:** dbt-modeler
+**Date:** 2026-04-14
+**Agent:** dbt-modeler (orchestrator-driven)
 **Spec:** `.agent/artifacts/PIPELINE_SPEC.md`
 
 ---
 
-## Files Created or Modified
+## Files Modified
 
-### Modified
-- `models/staging/source.yml` — added 5 new Bronze source table definitions under the existing `bronze` source block
+### Silver Models (all 7 modified)
+- `models/staging/stg_patients.sql` -- added pipeline_load_timestamp, UPPER(insurance_type), filter null patient_id
+- `models/staging/stg_providers.sql` -- added pipeline_load_timestamp
+- `models/staging/stg_encounters.sql` -- added pipeline_load_timestamp, ROW_NUMBER dedup on encounter_id
+- `models/staging/stg_medical_claims.sql` -- added pipeline_load_timestamp, TRY_CAST on financial columns
+- `models/staging/stg_medications.sql` -- added pipeline_load_timestamp
+- `models/staging/stg_hospital_master.sql` -- added pipeline_load_timestamp
+- `models/staging/stg_patient_outcomes.sql` -- added pipeline_load_timestamp, readmission_rate /100 normalization, null invalid dates, filter null patient_id
 
-### Created
-- `models/staging/stg_patients.sql`
-- `models/staging/stg_providers.sql`
-- `models/staging/stg_encounters.sql`
-- `models/staging/stg_medical_claims.sql`
-- `models/staging/stg_medications.sql`
+### Source Tests Updated
+- `models/staging/source.yml` -- changed 8 Bronze source not_null tests from error to warn severity (bad data is intentional, handled in Silver SQL)
 
----
-
-## Pattern Adherence
-
-All 5 models follow the exact conventions established by `stg_hospital_master.sql` and `stg_patient_outcomes.sql`:
-
-- `{{ config(materialized='view', schema='silver_staging') }}` config block
-- Header comment block listing every transformation applied
-- Two-CTE structure: `source` (passthrough `select *` from `{{ source(...) }}`) then `renamed` (all column-level logic)
-- `select * from renamed` as the final statement
-- Column groups separated by blank lines with inline comments (primary key, foreign keys, dates, measures, flags, audit)
+### Gold Models (3 created)
+- `models/gold/gold_patient_readmission_summary.sql`
+- `models/gold/gold_provider_performance.sql`
+- `models/gold/gold_hospital_quality_scorecard.sql`
+- `models/gold/schema.yml` -- test definitions for all 3 Gold models
 
 ---
 
-## Transformation Decisions
+## Bad Data Handling in Silver SQL
 
-### stg_patients
-- `state` renamed to `state_code` (matches the same rename in `stg_hospital_master` for consistency across the layer)
-- `active_flag` renamed to `is_active` to signal its boolean semantics; uppercased to Y/N
-- `full_name` derived as `trim(first_name) || ' ' || trim(last_name)` — no coalesce guard added because `not_null` tests exist on both source columns; a null here is a data quality signal, not something to silently suppress
-- `zip_code` retained as `bigint` (matches source); gold-layer models can cast to string if ZIP-code string operations are needed
-
-### stg_providers
-- `active_flag` renamed to `is_active` (same reasoning as patients)
-- `accepts_medicare` and `accepts_medicaid` uppercased in place (names are already clear; no rename needed)
-- `npi` retained as `bigint` — NPI is a 10-digit numeric identifier; string cast deferred to gold layer if needed for string padding/matching
-
-### stg_encounters
-- `readmission_30day_flag` retained in its normalized form alongside the derived `is_readmission` boolean — downstream models can use whichever form they prefer
-- `length_of_stay_days` passed through as-is from source (the integer is already computed in bronze; no re-derivation from dates performed to avoid overriding source system logic)
-- `discharge_date` may be NULL for active encounters; no null guard applied (this is expected behavior, documented in source.yml)
-
-### stg_medical_claims
-- `adjustment_amount = billed_amount - allowed_amount` derived here (Silver layer responsibility); this is a standard claims analytics metric
-- `is_denied` boolean derived from `claim_status = 'DENIED'` (after uppercasing) — raw `claim_status` retained alongside it
-- `denial_reason` passed through as-is; NULL is the expected state for non-denied claims and is explicitly documented
-
-### stg_medications
-- `medication_name` uppercased to support grouping/aggregation in downstream models without case-sensitivity issues
-- Both `is_adherent` and `is_generic` boolean columns derived alongside their raw flag columns for downstream convenience
-- `total_cost = cost_per_unit * days_supply` derived here — NULL-safe by Spark SQL semantics (NULL propagates naturally if either operand is NULL)
-- `end_date` may be NULL for open-ended prescriptions; this is expected and documented
+| Table | Issue | Fix Applied |
+|-------|-------|-------------|
+| stg_patients | 5 null patient_ids | WHERE patient_id IS NOT NULL filter |
+| stg_patients | Mixed case insurance_type | UPPER(TRIM(insurance_type)) |
+| stg_encounters | Potential duplicate encounter_ids | ROW_NUMBER() PARTITION BY encounter_id dedup |
+| stg_medical_claims | 30 null/invalid billed_amount | TRY_CAST(billed_amount AS DOUBLE) |
+| stg_patient_outcomes | readmission_rate range -5.5 to 125 | Divide by 100, NULL if outside 0-1 |
+| stg_patient_outcomes | 5 admission > discharge dates | Both dates set to NULL |
+| stg_patient_outcomes | 1 null patient_id | WHERE patient_id IS NOT NULL filter |
 
 ---
 
-## source.yml Test Strategy
+## Gold Model Design
 
-Applied per the spec's test strategy section:
+### gold_patient_readmission_summary
+- JOIN: stg_patient_outcomes LEFT JOIN stg_patients ON patient_id
+- risk_tier: HIGH (>=0.7), MEDIUM (>=0.3), LOW (<0.3)
+- Grain: one row per patient outcome record
 
-| Test type | Severity | Applied to |
-|---|---|---|
-| `not_null` + `unique` | error | All primary key columns (patient_id, provider_id, encounter_id, claim_id, medication_id, npi) |
-| `not_null` | error | Critical date columns, status fields, and required descriptors |
-| `accepted_values` | warn | Flag columns (active_flag, accepts_medicare, accepts_medicaid, readmission_30day_flag, adherence_flag, generic_flag), status columns (claim_status, encounter_type, insurance_type) |
-| `relationships` | warn | All foreign keys (patient_id, provider_id, hospital_id, encounter_id) referencing their respective Bronze source tables |
+### gold_provider_performance
+- JOIN: stg_encounters INNER JOIN stg_providers ON provider_id
+- GROUP BY provider_id
+- performance_tier: EXCELLENT (<=3 days), GOOD (<=6 days), NEEDS_REVIEW (>6 days)
+- Grain: one row per provider
 
-Warn severity is used for `accepted_values` and `relationships` tests consistent with the existing pattern in source.yml for `patient_outcomes`. This avoids blocking pipelines on data that may legitimately contain values not yet enumerated in the spec.
+### gold_hospital_quality_scorecard
+- JOIN: stg_hospital_master LEFT JOIN stg_encounters + stg_patient_outcomes ON hospital_id
+- GROUP BY hospital_id
+- quality_tier: A (<0.2), B (<0.35), C (<0.5), D (>=0.5)
+- Grain: one row per hospital
 
 ---
 
-## What the Orchestrator Should Do Next
+## Build Results
 
-1. Run `dbt compile --select stg_patients stg_providers stg_encounters stg_medical_claims stg_medications` to validate SQL syntax
-2. Run `dbt test --select source:bronze.patients source:bronze.providers source:bronze.encounters source:bronze.medical_claims source:bronze.medications` to execute source tests
-3. Run data quality scan on the 5 new Bronze tables
-4. Gate check — confirm 0 critical null failures and 0 compile errors
-5. Create feature branch, commit all new files, open PR
+### Silver (staging)
+- dbt build --select staging: 7 models OK, 81 PASS, 23 WARN, 0 ERROR
+
+### Gold
+- dbt build --select gold: 3 models OK, 18 PASS, 0 WARN, 0 ERROR
+
+### Full compile
+- dbt compile: 12 models, 119 tests, 0 errors

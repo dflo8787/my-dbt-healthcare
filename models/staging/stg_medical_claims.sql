@@ -12,16 +12,11 @@
 
   Transformations applied:
     - String normalization: claim_status and insurance_type uppercased and trimmed
-      for consistent downstream filtering and grouping
     - procedure_desc and primary_diagnosis_desc trimmed to remove whitespace
-    - Derived column: adjustment_amount = billed_amount - allowed_amount, representing
-      the contractual adjustment applied by the payer; NULL-safe (NULL when either
-      source amount is NULL)
-    - Derived column: is_denied boolean flag derived from claim_status for
-      convenient downstream filtering; raw claim_status retained for auditability
-    - denial_reason passed through as-is; NULL is expected for non-denied claims
-    - All financial amounts (billed_amount, allowed_amount, paid_amount,
-      patient_responsibility) are double in source — retained as-is; no cast needed
+    - Derived column: adjustment_amount = billed_amount - allowed_amount
+    - Derived column: is_denied boolean flag derived from claim_status
+    - Financial amounts protected with TRY_CAST to handle null/invalid values
+    - Bad data: 30 null/invalid billed_amount values set to NULL via TRY_CAST
 */
 
 with source as (
@@ -55,14 +50,14 @@ renamed as (
         trim(procedure_code)                    as procedure_code,
         trim(procedure_desc)                    as procedure_desc,
 
-        -- financial amounts (source is double; no cast required)
-        billed_amount,
-        allowed_amount,
-        paid_amount,
-        patient_responsibility,
+        -- financial amounts — TRY_CAST to handle invalid/null values safely
+        try_cast(billed_amount as double)       as billed_amount,
+        try_cast(allowed_amount as double)      as allowed_amount,
+        try_cast(paid_amount as double)         as paid_amount,
+        try_cast(patient_responsibility as double) as patient_responsibility,
 
         -- derived financial metric: contractual adjustment
-        billed_amount - allowed_amount          as adjustment_amount,
+        try_cast(billed_amount as double) - try_cast(allowed_amount as double) as adjustment_amount,
 
         -- claim status — normalised to uppercase; boolean denial flag derived
         upper(trim(claim_status))               as claim_status,
@@ -75,7 +70,10 @@ renamed as (
         denial_reason,
 
         -- audit date
-        created_date
+        created_date,
+
+        -- pipeline audit
+        current_timestamp()                     as pipeline_load_timestamp
 
     from source
 

@@ -1,6 +1,6 @@
 {
-  "silver_tasks": ["stg_patients", "stg_providers", "stg_encounters", "stg_medical_claims", "stg_medications"],
-  "gold_tasks": [],
+  "silver_tasks": ["stg_patients", "stg_providers", "stg_encounters", "stg_medical_claims", "stg_medications", "stg_hospital_master", "stg_patient_outcomes"],
+  "gold_tasks": ["gold_patient_readmission_summary", "gold_provider_performance", "gold_hospital_quality_scorecard"],
   "excluded_tables": [],
   "exclusion_reason": null
 }

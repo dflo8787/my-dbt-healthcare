@@ -1,136 +1,89 @@
-# Pipeline Specification: Healthcare Bronze-to-Silver Staging Models
+# Pipeline Specification: Section 6 -- Gold Layer + Timestamp + Bad Data Validation
 
 ## Feature Summary
-Create 5 Silver staging models from Bronze healthcare tables. Each model applies standard staging transformations: column renaming for clarity, type casting, whitespace/casing normalization, and derived convenience columns. Models follow the existing patterns established by `stg_hospital_master` and `stg_patient_outcomes`.
+1. Add pipeline_load_timestamp to all 7 Silver staging models
+2. Add bad data handling to Silver SQL (null PKs, mixed casing, invalid dates, out-of-range values, deduplication, TRY_CAST)
+3. Build 3 Gold models: gold_patient_readmission_summary, gold_provider_performance, gold_hospital_quality_scorecard
 
-## Bronze Source Schemas
+## Acceptance Criteria -- Silver
+1. All 7 Silver models have pipeline_load_timestamp column
+2. Null patient_ids filtered out in stg_patients and stg_patient_outcomes
+3. insurance_type standardized to UPPER case in stg_patients
+4. readmission_rate values outside 0-1 set to NULL in stg_patient_outcomes
+5. Invalid dates (admission > discharge) set to NULL in stg_patient_outcomes
+6. Duplicate encounter_ids deduplicated (keep first) in stg_encounters
+7. Null/invalid billed_amount set to NULL via TRY_CAST in stg_medical_claims
+8. dbt compile passes with 0 errors
+9. dbt test passes with 0 failures
 
-### li_ws.bronze.patients (200 rows)
-| Column | Type |
-|---|---|
-| patient_id | string |
-| first_name | string |
-| last_name | string |
-| date_of_birth | date |
-| age | bigint |
-| gender | string |
-| race | string |
-| insurance_type | string |
-| insurance_id | string |
-| primary_hospital_id | string |
-| zip_code | bigint |
-| state | string |
-| active_flag | string |
-| created_date | date |
-| updated_date | date |
+## Acceptance Criteria -- Gold
+1. All 3 Gold tables exist in li_ws.gold schema
+2. All 3 Gold tables have pipeline_load_timestamp column
+3. risk_tier, performance_tier, quality_tier columns populated correctly
+4. 0 dbt test failures on Gold models
+5. Gold tables only materialize AFTER human APPROVE at Phase 9
 
-### li_ws.bronze.providers (50 rows)
-| Column | Type |
-|---|---|
-| provider_id | string |
-| first_name | string |
-| last_name | string |
-| specialty | string |
-| npi | bigint |
-| hospital_id | string |
-| accepts_medicare | string |
-| accepts_medicaid | string |
-| years_experience | bigint |
-| active_flag | string |
-| created_date | date |
+## Silver Models to Modify (all 7)
+- stg_hospital_master -- add timestamp
+- stg_patient_outcomes -- add timestamp + filter null patient_id + normalize readmission_rate to 0-1 + null invalid dates
+- stg_patients -- add timestamp + filter null patient_id + UPPER insurance_type
+- stg_providers -- add timestamp
+- stg_encounters -- add timestamp + ROW_NUMBER dedup on encounter_id
+- stg_medical_claims -- add timestamp + TRY_CAST billed_amount
+- stg_medications -- add timestamp
 
-### li_ws.bronze.encounters (500 rows)
-| Column | Type |
-|---|---|
-| encounter_id | string |
-| patient_id | string |
-| provider_id | string |
-| hospital_id | string |
-| encounter_date | date |
-| encounter_type | string |
-| primary_diagnosis | string |
-| discharge_date | date |
-| length_of_stay_days | bigint |
-| admit_source | string |
-| discharge_disposition | string |
-| readmission_30day_flag | string |
-| created_date | date |
+## Gold Models to Create (3)
+1. gold_patient_readmission_summary (stg_patient_outcomes + stg_patients) -- risk_tier
+2. gold_provider_performance (stg_encounters + stg_providers) -- performance_tier
+3. gold_hospital_quality_scorecard (stg_hospital_master + stg_patient_outcomes + stg_encounters) -- quality_tier
 
-### li_ws.bronze.medical_claims (500 rows)
-| Column | Type |
-|---|---|
-| claim_id | string |
-| encounter_id | string |
-| patient_id | string |
-| provider_id | string |
-| hospital_id | string |
-| claim_date | date |
-| service_date | date |
-| insurance_type | string |
-| primary_diagnosis_code | string |
-| primary_diagnosis_desc | string |
-| procedure_code | string |
-| procedure_desc | string |
-| billed_amount | double |
-| allowed_amount | double |
-| paid_amount | double |
-| patient_responsibility | double |
-| claim_status | string |
-| denial_reason | string |
-| created_date | date |
+## Bronze Quality Issues -- FIX INSTRUCTIONS
 
-### li_ws.bronze.medications (400 rows)
-| Column | Type |
-|---|---|
-| medication_id | string |
-| encounter_id | string |
-| patient_id | string |
-| provider_id | string |
-| medication_name | string |
-| dosage | string |
-| frequency | string |
-| indication | string |
-| prescribed_date | date |
-| end_date | date |
-| days_supply | bigint |
-| refills_authorized | bigint |
-| adherence_flag | string |
-| generic_flag | string |
-| cost_per_unit | double |
-| created_date | date |
+### stg_patients
+1. Filter out rows WHERE patient_id IS NULL (5 rows in Bronze)
+2. Apply UPPER() to insurance_type to standardize casing
 
-## Acceptance Criteria
-1. All 5 staging models created in `models/staging/`
-2. `dbt compile` passes with 0 errors
-3. `dbt test` passes with 0 failures
-4. Quality scan shows 0 critical nulls on key columns
-5. All models documented in `source.yml`
-6. Feature branch created and PR opened
+### stg_encounters
+1. Add ROW_NUMBER() OVER (PARTITION BY encounter_id ORDER BY created_date) deduplication
+2. Keep only rn = 1
 
-## Models to Create
-1. `stg_patients.sql` — from `bronze.patients`
-2. `stg_providers.sql` — from `bronze.providers`
-3. `stg_encounters.sql` — from `bronze.encounters`
-4. `stg_medical_claims.sql` — from `bronze.medical_claims`
-5. `stg_medications.sql` — from `bronze.medications`
+### stg_medical_claims
+1. Replace billed_amount with TRY_CAST(billed_amount AS DOUBLE)
+2. Also apply TRY_CAST to allowed_amount, paid_amount, patient_responsibility defensively
 
-## Task Breakdown (Ordered)
-1. Add 5 new Bronze source definitions to `models/staging/source.yml`
-2. Create `stg_patients.sql` with demographic normalization
-3. Create `stg_providers.sql` with NPI and flag normalization
-4. Create `stg_encounters.sql` with date/disposition normalization
-5. Create `stg_medical_claims.sql` with financial field casting and status normalization
-6. Create `stg_medications.sql` with prescription date handling and cost casting
-7. Run `dbt compile` to validate all models
-8. Add schema tests (not_null, unique on PKs) to `source.yml`
-9. Run `dbt test` to validate all tests pass
-10. Run data quality scan on Bronze tables
-11. Gate check — verify all hard gates pass
-12. Create feature branch, commit, and open PR
+### stg_patient_outcomes
+1. Normalize readmission_rate: cast(readmission_rate as double) / 100.0 to get 0-1 scale
+2. After normalization, set to NULL where value < 0 OR value > 1
+3. NULL out admission_date and discharge_date where admission_date > discharge_date
+4. Filter out rows WHERE patient_id IS NULL (1 row)
+
+### stg_hospital_master, stg_providers, stg_medications
+No fixes needed beyond adding pipeline_load_timestamp
+
+## Gold Model Specifications
+
+### gold_patient_readmission_summary
+- Sources: ref('stg_patient_outcomes') JOIN ref('stg_patients') ON patient_id
+- Columns: patient_id, insurance_type, admission_date, discharge_date, length_of_stay_days, readmission_rate, risk_tier, pipeline_load_timestamp
+- risk_tier: CASE WHEN readmission_rate >= 0.7 THEN 'HIGH' WHEN readmission_rate >= 0.3 THEN 'MEDIUM' ELSE 'LOW' END
+- Materialization: table, schema: gold
+
+### gold_provider_performance
+- Sources: ref('stg_encounters') JOIN ref('stg_providers') ON provider_id
+- GROUP BY provider_id
+- Columns: provider_id, total_encounters, unique_patients, avg_length_of_stay, performance_tier, pipeline_load_timestamp
+- performance_tier: CASE WHEN avg_length_of_stay <= 3 THEN 'EXCELLENT' WHEN avg_length_of_stay <= 6 THEN 'GOOD' ELSE 'NEEDS_REVIEW' END
+- Materialization: table, schema: gold
+
+### gold_hospital_quality_scorecard
+- Sources: ref('stg_hospital_master') + ref('stg_patient_outcomes') + ref('stg_encounters')
+- GROUP BY hospital_id
+- Columns: hospital_id, total_encounters, total_patients, avg_readmission_rate, quality_tier, pipeline_load_timestamp
+- quality_tier: CASE WHEN avg_readmission_rate < 0.2 THEN 'A' WHEN avg_readmission_rate < 0.35 THEN 'B' WHEN avg_readmission_rate < 0.5 THEN 'C' ELSE 'D' END
+- Materialization: table, schema: gold
 
 ## Test Strategy
-- **Primary keys**: `not_null` + `unique` on each table's ID column
-- **Foreign keys**: `relationships` tests (warn severity) for patient_id, provider_id, hospital_id, encounter_id across tables
-- **Not null**: On critical columns (dates, status fields, identifiers)
-- **Accepted values**: On flag/status columns (active_flag, claim_status, encounter_type, etc.)
-- **Data quality scan**: Profile Bronze tables for null rates, duplicates, anomalies on key columns
+- All existing Bronze source tests remain (101 tests)
+- Add not_null + unique tests on Gold PKs
+- Add accepted_values tests on tier columns
+- Add not_null on pipeline_load_timestamp across all models

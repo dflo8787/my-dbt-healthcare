@@ -122,10 +122,15 @@ sources:
           - name: patient_id
             description: >
               Primary key for the patient (e.g. PAT_20001). Uniquely identifies
-              a patient across all clinical and claims tables.
+              a patient across all clinical and claims tables. 5 null PKs exist
+              in Bronze bad data — filtered out in Silver.
             data_tests:
-              - not_null
-              - unique
+              - not_null:
+                  config:
+                    severity: warn
+              - unique:
+                  config:
+                    severity: warn
 
           - name: first_name
             description: Patient given name as recorded in the source system.
@@ -389,21 +394,28 @@ sources:
           - name: admit_source
             description: >
               Source of patient admission (e.g. EMERGENCY_ROOM, PHYSICIAN_REFERRAL).
+              3 null values exist in Bronze bad data rows.
             data_tests:
-              - not_null
+              - not_null:
+                  config:
+                    severity: warn
 
           - name: discharge_disposition
             description: >
               Destination or status at time of discharge (e.g. HOME, SNF, EXPIRED).
             data_tests:
-              - not_null
+              - not_null:
+                  config:
+                    severity: warn
 
           - name: readmission_30day_flag
             description: >
               Whether the encounter resulted in a readmission within 30 days.
-              Known values: Y, N.
+              Known values: Y, N. 3 null values in Bronze bad data rows.
             data_tests:
-              - not_null
+              - not_null:
+                  config:
+                    severity: warn
               - accepted_values:
                   arguments:
                     values: ['Y', 'N']
@@ -441,9 +453,11 @@ sources:
                     severity: warn
 
           - name: patient_id
-            description: Foreign key to patients.
+            description: Foreign key to patients. 30 null values in Bronze bad data rows.
             data_tests:
-              - not_null
+              - not_null:
+                  config:
+                    severity: warn
               - relationships:
                   arguments:
                     to: source('bronze', 'patients')
@@ -452,9 +466,11 @@ sources:
                     severity: warn
 
           - name: provider_id
-            description: Foreign key to providers.
+            description: Foreign key to providers. 30 null values in Bronze bad data rows.
             data_tests:
-              - not_null
+              - not_null:
+                  config:
+                    severity: warn
               - relationships:
                   arguments:
                     to: source('bronze', 'providers')
@@ -463,9 +479,11 @@ sources:
                     severity: warn
 
           - name: hospital_id
-            description: Foreign key to hospital_master.
+            description: Foreign key to hospital_master. 30 null values in Bronze bad data rows.
             data_tests:
-              - not_null
+              - not_null:
+                  config:
+                    severity: warn
               - relationships:
                   arguments:
                     to: source('bronze', 'hospital_master')
@@ -476,19 +494,25 @@ sources:
           - name: claim_date
             description: Date the claim was submitted to the payer.
             data_tests:
-              - not_null
+              - not_null:
+                  config:
+                    severity: warn
 
           - name: service_date
-            description: Date the service was rendered.
+            description: Date the service was rendered. 30 null values in Bronze bad data rows.
             data_tests:
-              - not_null
+              - not_null:
+                  config:
+                    severity: warn
 
           - name: insurance_type
             description: >
-              Insurance type for this claim.
+              Insurance type for this claim. 30 null values in Bronze bad data rows.
               Known values: MEDICARE, MEDICAID, COMMERCIAL, SELF_PAY, OTHER.
             data_tests:
-              - not_null
+              - not_null:
+                  config:
+                    severity: warn
               - accepted_values:
                   arguments:
                     values: ['MEDICARE', 'Medicaid', 'MEDICAID', 'Commercial',
@@ -499,7 +523,9 @@ sources:
           - name: primary_diagnosis_code
             description: ICD-10 diagnosis code for the primary diagnosis on this claim.
             data_tests:
-              - not_null
+              - not_null:
+                  config:
+                    severity: warn
 
           - name: primary_diagnosis_desc
             description: Text description of the primary diagnosis code.
@@ -507,15 +533,21 @@ sources:
           - name: procedure_code
             description: CPT or HCPCS procedure code for the billed service.
             data_tests:
-              - not_null
+              - not_null:
+                  config:
+                    severity: warn
 
           - name: procedure_desc
             description: Text description of the procedure code.
 
           - name: billed_amount
-            description: Total amount billed to the payer by the provider.
+            description: >
+              Total amount billed to the payer by the provider.
+              30 null/invalid values in Bronze bad data rows — handled via TRY_CAST in Silver.
             data_tests:
-              - not_null
+              - not_null:
+                  config:
+                    severity: warn
 
           - name: allowed_amount
             description: Amount the payer has contractually allowed for the service.

@@ -44,7 +44,10 @@ renamed as (
         case
             when num_beds >= 1000 then true
             else false
-        end                              as is_large_hospital
+        end                              as is_large_hospital,
+
+        -- pipeline audit
+        current_timestamp()              as pipeline_load_timestamp
 
     from source
 
