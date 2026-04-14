@@ -148,6 +148,7 @@ CREATE TABLE IF NOT EXISTS li_ws.intelligence_layer.pipeline_analytics (
   run_duration_minutes    FLOAT,
   pr_url                  STRING,
   overall_health          STRING,
+  estimated_cost_usd      FLOAT,
   logged_at               TIMESTAMP
 );
 
@@ -324,7 +325,7 @@ Insert one row with layer='GOLD', scan_type='POST_BUILD'.
 Read: .agent/artifacts/PIPELINE_SPEC.md
 Read: .agent/artifacts/task_list.json
 
-Absorb task_list.json content into models_requested column (JSON string).
+Absorb task_list.json content into task_list_json column (JSON string).
 ```sql
 INSERT INTO li_ws.intelligence_layer.pipeline_specs VALUES (
   '[run_date]', '[run_id]', '[feature_summary]',
@@ -416,6 +417,13 @@ INSERT INTO li_ws.intelligence_layer.executive_briefs VALUES (
 
 Read: .agent/artifacts/PIPELINE_ANALYTICS_LOG.csv
 Parse the most recent row (last line of CSV).
+
+Before inserting, calculate estimated_cost_usd for this run:
+  Count Opus agent phases (Phases 1, 2, 3, 4, 5, 6, 7, 9, 11) = up to 9 Opus runs
+  Count Sonnet agent phases (Phases 8, 10, 12) = up to 3 Sonnet runs
+  Only count phases that actually completed (read from execution_log.md)
+  estimated_cost_usd = (opus_phases_completed × 0.12) + (sonnet_phases_completed × 0.02)
+
 ```sql
 INSERT INTO li_ws.intelligence_layer.pipeline_analytics VALUES (
   '[run_date]', '[run_id]', '[run_timestamp]',
@@ -424,7 +432,9 @@ INSERT INTO li_ws.intelligence_layer.pipeline_analytics VALUES (
   [retry_count], [escalation_count],
   [p0], [p1], [p2], [p3],
   [bronze_rows], [silver_rows], [duration_minutes],
-  '[pr_url]', '[overall_health]', current_timestamp()
+  '[pr_url]', '[overall_health]',
+  [estimated_cost_usd],
+  current_timestamp()
 );
 ```
 
@@ -451,6 +461,8 @@ INSERT INTO li_ws.intelligence_layer.weekly_analytics VALUES (
 );
 ```
 
+If file does not exist → skip this step, log SKIPPED.
+
 ---
 
 ## STEP 13 — Write intelligence_layer.gate_failures (If Exists)
@@ -468,6 +480,8 @@ INSERT INTO li_ws.intelligence_layer.gate_failures VALUES (
   current_timestamp()
 );
 ```
+
+If file does not exist → skip this step, log SKIPPED.
 
 ---
 
@@ -487,6 +501,8 @@ INSERT INTO li_ws.intelligence_layer.agent_retry_log VALUES (
 );
 ```
 
+If no retry logs exist → skip this step, log SKIPPED.
+
 ---
 
 ## STEP 15 — Write intelligence_layer.escalation_reports (If Exists)
@@ -505,6 +521,8 @@ INSERT INTO li_ws.intelligence_layer.escalation_reports VALUES (
   'pending', current_timestamp()
 );
 ```
+
+If file does not exist → skip this step, log SKIPPED.
 
 ---
 
@@ -569,10 +587,10 @@ INSERT INTO li_ws.second_brain.architecture_decisions VALUES
    'Implemented. PM2 plus Windows Task Scheduler workaround for pm2 startup bug.',
    'Dennis Florentino', 'Cheat sheet Sections 15-20', current_timestamp()),
   ('DECISION-005', '2026-04-01',
-   'Two human touchpoints only',
+   'Two human touchpoints only — both via GitHub PR',
    'Designing automation vs human boundary in pipeline',
    'Full automation vs every phase vs two touchpoints',
-   'Silver PR merge plus Gold APPROVE. Optimal human/agent balance for healthcare.',
+   'Silver PR merge plus Gold PR merge. Both done on GitHub mobile. Full audit trail.',
    'Implemented in pipeline-orchestrator.md Phase 7 and Phase 9.',
    'Dennis Florentino', 'pipeline-orchestrator.md', current_timestamp()),
   ('DECISION-006', '2026-04-01',
@@ -591,19 +609,23 @@ INSERT INTO li_ws.second_brain.architecture_decisions VALUES
    'Dennis Florentino', 'MODEL_ROUTING.md, dbt-runner-agent.md', current_timestamp());
 ```
 
-If count > 0, skip — decisions already loaded.
+If count > 0 → skip, decisions already loaded.
 
 ---
 
 ## STEP 18 — Write second_brain.web_intelligence (If New Findings)
 
-Check for new web intelligence files:
+Check for web intelligence files:
 ```bash
 ls memory/web-intelligence/*.md 2>/dev/null
 ```
 
-For each .md file found that has not been previously written
-(check by querying: SELECT finding_date FROM li_ws.second_brain.web_intelligence):
+For each .md file found, check if already written by querying:
+```sql
+SELECT finding_date FROM li_ws.second_brain.web_intelligence;
+```
+
+For each new file not previously written:
 ```sql
 INSERT INTO li_ws.second_brain.web_intelligence VALUES (
   '[finding_date]', '[run_id]', '[source_name]', '[source_url]',
@@ -614,11 +636,13 @@ INSERT INTO li_ws.second_brain.web_intelligence VALUES (
 );
 ```
 
+If no new files → skip this step, log SKIPPED.
+
 ---
 
 ## STEP 19 — Write second_brain.weekly_reviews (If New Weekly Review)
 
-Check for new weekly review files:
+Check for weekly review files:
 ```bash
 ls memory/weekly-reviews/*.md 2>/dev/null
 ```
@@ -632,6 +656,8 @@ INSERT INTO li_ws.second_brain.weekly_reviews VALUES (
   '[top_3_recommendations]', current_timestamp()
 );
 ```
+
+If no new files → skip this step, log SKIPPED.
 
 ---
 
@@ -660,7 +686,7 @@ UNION ALL SELECT 'second_brain', 'weekly_reviews', COUNT(*) FROM li_ws.second_br
 ```
 
 Write to logs/execution_log.md:
-[TIMESTAMP] | PHASE 12 | pipeline-ops-writer | COMPLETE | intelligence_layer: [N] tables | second_brain: [N] tables
+[TIMESTAMP] | PHASE 12 | pipeline-ops-writer | COMPLETE | intelligence_layer: 13 tables | second_brain: 4 tables
 
 ---
 
