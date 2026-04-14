@@ -55,7 +55,10 @@ renamed as (
         upper(trim(active_flag))                    as is_active,
 
         -- audit date
-        created_date
+        created_date,
+
+        -- pipeline audit
+        current_timestamp()                     as pipeline_load_timestamp
 
     from source
 

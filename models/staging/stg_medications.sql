@@ -75,7 +75,10 @@ renamed as (
         cost_per_unit * days_supply             as total_cost,
 
         -- audit date
-        created_date
+        created_date,
+
+        -- pipeline audit
+        current_timestamp()                     as pipeline_load_timestamp
 
     from source
 

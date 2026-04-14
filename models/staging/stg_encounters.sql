@@ -18,13 +18,25 @@
       (Y -> true, anything else -> false); the raw flag column is retained as
       readmission_30day_flag for auditability
     - length_of_stay_days passed through as-is from source (integer, already computed)
-    - discharge_date may be NULL for active/still-admitted encounters — this is
-      expected and not treated as a data quality failure
+    - discharge_date may be NULL for active/still-admitted encounters
+    - Bad data: duplicate encounter_ids deduplicated via ROW_NUMBER (keep first by created_date)
 */
 
 with source as (
 
     select * from {{ source('bronze', 'encounters') }}
+
+),
+
+deduplicated as (
+
+    select
+        *,
+        row_number() over (
+            partition by encounter_id
+            order by created_date
+        ) as _row_num
+    from source
 
 ),
 
@@ -62,9 +74,13 @@ renamed as (
         end                                     as is_readmission,
 
         -- audit date
-        created_date
+        created_date,
 
-    from source
+        -- pipeline audit
+        current_timestamp()                     as pipeline_load_timestamp
+
+    from deduplicated
+    where _row_num = 1
 
 )
 

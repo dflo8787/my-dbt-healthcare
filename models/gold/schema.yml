@@ -1,0 +1,122 @@
+version: 2
+
+models:
+  - name: gold_patient_readmission_summary
+    description: >
+      Identifies high-risk readmission patients for clinical review.
+      Joins patient outcomes with patient demographics to provide
+      insurance context alongside readmission risk tiers.
+    columns:
+      - name: patient_id
+        description: Patient identifier from stg_patient_outcomes.
+        data_tests:
+          - not_null
+
+      - name: insurance_type
+        description: Insurance type from stg_patients (may be NULL if patient not found).
+
+      - name: admission_date
+        description: Admission date (NULL if original dates were invalid).
+
+      - name: discharge_date
+        description: Discharge date (NULL if original dates were invalid or patient still active).
+
+      - name: length_of_stay_days
+        description: Computed length of stay in days.
+
+      - name: readmission_rate
+        description: Readmission rate normalised to 0-1 scale (NULL if out of range).
+
+      - name: risk_tier
+        description: >
+          Risk classification based on readmission rate.
+          HIGH >= 0.7, MEDIUM >= 0.3, LOW < 0.3.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['HIGH', 'MEDIUM', 'LOW']
+
+      - name: pipeline_load_timestamp
+        description: Timestamp when the pipeline loaded this row.
+        data_tests:
+          - not_null
+
+  - name: gold_provider_performance
+    description: >
+      Executive view of provider efficiency and patient volume.
+      Aggregates encounter data by provider with performance tiers.
+    columns:
+      - name: provider_id
+        description: Provider identifier.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: total_encounters
+        description: Total number of encounters for this provider.
+        data_tests:
+          - not_null
+
+      - name: unique_patients
+        description: Count of distinct patients seen by this provider.
+        data_tests:
+          - not_null
+
+      - name: avg_length_of_stay
+        description: Average length of stay in days across all encounters.
+
+      - name: performance_tier
+        description: >
+          Performance classification based on average length of stay.
+          EXCELLENT <= 3, GOOD <= 6, NEEDS_REVIEW > 6.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['EXCELLENT', 'GOOD', 'NEEDS_REVIEW']
+
+      - name: pipeline_load_timestamp
+        description: Timestamp when the pipeline loaded this row.
+        data_tests:
+          - not_null
+
+  - name: gold_hospital_quality_scorecard
+    description: >
+      Executive hospital quality ranking for leadership reporting.
+      Combines hospital, outcomes, and encounter data to produce
+      a quality grade (A-D) per hospital.
+    columns:
+      - name: hospital_id
+        description: Hospital identifier.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: total_encounters
+        description: Total encounters at this hospital.
+        data_tests:
+          - not_null
+
+      - name: total_patients
+        description: Count of distinct patients at this hospital.
+        data_tests:
+          - not_null
+
+      - name: avg_readmission_rate
+        description: Average readmission rate (0-1 scale) across outcomes.
+
+      - name: quality_tier
+        description: >
+          Quality grade based on average readmission rate.
+          A < 0.2, B < 0.35, C < 0.5, D >= 0.5.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['A', 'B', 'C', 'D']
+
+      - name: pipeline_load_timestamp
+        description: Timestamp when the pipeline loaded this row.
+        data_tests:
+          - not_null

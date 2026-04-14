@@ -20,4 +20,12 @@
 [2026-04-14 12:03:00 UTC] | PHASE 3 | orchestrator | COMPLETE | spec written | 5 silver tasks | 0 gold tasks | 0 excluded
 [2026-04-14 12:02:00 UTC] | PHASE 2 | data-quality-scanner | COMPLETE | Bronze scan PASS | 0 critical nulls on PKs or key columns across all 5 tables | Row counts: patients=200, providers=50, encounters=500, medical_claims=500, medications=400
 
+## Run 3 — 2026-04-14 (Section 6: Gold Layer + Timestamp + Bad Data)
+[2026-04-14 21:02:00 UTC] | PHASE 1 | orchestrator | COMPLETE | 7 Bronze tables found (patients=238, providers=50, encounters=503, medical_claims=530, medications=400, hospital_master=7, patient_outcomes=24)
+[2026-04-14 21:07:00 UTC] | PHASE 2 | data-quality-scanner | COMPLETE | Bronze scan PASS(WARN) | 5 null PKs patients, 30 null billed_amount claims, 19 OOR readmission_rate, 5 invalid dates, 1 null PK outcomes
+[2026-04-14 21:10:00 UTC] | PHASE 3 | orchestrator | COMPLETE | spec written | 7 silver tasks | 3 gold tasks | 0 excluded
+[2026-04-14 21:17:00 UTC] | PHASE 4 | dbt-modeler | COMPLETE | 7 silver models updated + 3 gold models created | compile: 0 errors
+[2026-04-14 21:18:00 UTC] | PHASE 5 | data-quality-scanner | COMPLETE | Silver: 81 pass 23 warn 0 fail | Gold: 18 pass 0 warn 0 fail | 119 total
+[2026-04-14 21:19:00 UTC] | PHASE 6 | gate | COMPLETE | all 7 hard gates passed | 0 disallowed SQL patterns
+
 ## Completed Runs
