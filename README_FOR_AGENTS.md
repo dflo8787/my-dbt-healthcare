@@ -57,6 +57,18 @@ claude mcp list
 ---
 
 ## Architecture Notes
+```
+Data flow:
+  li_ws.bronze (read-only forever)
+  → li_ws.silver_staging (dbt-built, tested)
+  → li_ws.gold (human-approved, exec-facing)
+  → li_ws.intelligence_layer (pipeline ops — 13 tables)
+  → li_ws.second_brain (institutional knowledge — 4 tables)
+
+Two human actions per run:
+  1. Merge Silver PR on GitHub (Phase 7)
+  2. Merge Gold PR on GitHub (Phase 9 — only when Gold requested)
+```
 ## Writable vs Read-Only
 
 | Location | Permission | Rule |

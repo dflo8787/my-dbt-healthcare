@@ -14,12 +14,35 @@ Time: ~35-45 minutes | Human actions: 2 PR merges on GitHub
 8. Check DAILY_EXECUTIVE_BRIEF.md for health summary
 
 ## Workflow 2: Bronze Scan Only
+Type in Claude Code terminal:
+Use the data-quality-scanner agent to profile all Bronze tables and generate a quality report
+
 Output: .agent/artifacts/BRONZE_QUALITY_REPORT.md
 
 ## Workflow 3: Query Pipeline History
+Type in Claude Code terminal:
+Use the pipeline-memory-agent to answer: [your question in plain English]
+
 ## Workflow 4: Diagnose a Failure
+Type in Claude Code terminal:
+Use the root-cause-tracer agent to diagnose the most recent failure and generate a fix plan
+
 Output: .agent/artifacts/ROOT_CAUSE_REPORT.md
 
-## Workflow 5: Weekly Intelligence
+## Workflow 5: Weekly Intelligence Report
+Type in Claude Code terminal:
+Use the pipeline-intelligence-manager agent in MODE B
+
+Output: WEEKLY_PIPELINE_ANALYTICS.md with sentiment analysis
+
 ## Workflow 6: Stack Change Check
-## Workflow 7: Write to Databricks
+Type in Claude Code terminal:
+Use the web-monitor-agent to check all monitored sources for changes relevant to the healthcare pipeline stack
+
+Output: memory/web-intelligence/[date]-findings.md
+
+## Workflow 7: Write All Artifacts to Databricks
+Type in Claude Code terminal:
+Use the pipeline-ops-writer agent to read all current artifacts and write to li_ws.intelligence_layer and li_ws.second_brain tables in Databricks
+
+Output: 17 Databricks tables updated

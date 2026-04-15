@@ -86,12 +86,35 @@ Identify the first causal frame — where the problem STARTED, not where it SHOW
 ## STEP 4 — Hypothesize Root Causes
 
 Generate 2-3 plausible root causes in order of likelihood:
+Hypothesis 1 (probability: HIGH):
+What: [one sentence description]
+Evidence for: [what supports this]
+Evidence against: [what contradicts this]
+Discriminating test: [exact bash command to confirm or rule out]
+Hypothesis 2 (probability: MEDIUM):
+What: [one sentence description]
+Evidence for: [what supports this]
+Evidence against: [what contradicts this]
+Discriminating test: [exact bash command to confirm or rule out]
 Run the discriminating test for the most likely hypothesis.
 
 ---
 
 ## STEP 5 — Build Fix Plan
+Once root cause is confirmed write:
 
+```
+Root Cause Confirmed: [error type] — [one sentence plain English]
+
+Fix Plan:
+  File to change: [exact file path]
+  What to change: [specific description of the change]
+  Why this fixes it: [direct link back to root cause]
+  Risk of change: LOW / MEDIUM / HIGH
+
+Validation Command:
+  [exact dbt test or dbt compile command to run after fix]
+```
 ---
 
 ## STEP 6 — Check FAILURE_PLAYBOOK.md
