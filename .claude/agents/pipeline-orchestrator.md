@@ -50,10 +50,10 @@ ORCHESTRATOR STRATEGY 3 — Partial pipeline with human checkpoint
   Rationale: Don't block all good work because of one problem model
 
 ORCHESTRATOR ESCALATION — All strategies exhausted
-  Write HUMAN_ESCALATION_REPORT.md with complete diagnostic package
-  STOP the pipeline cleanly
-  Alert human with full context (see Escalation Format below)
-
+ Step 1: Invoke root-cause-tracer agent — provide failed phase, agent, all retry log paths — wait for ROOT_CAUSE_REPORT.md
+  Step 2: Write HUMAN_ESCALATION_REPORT.md — include link to ROOT_CAUSE_REPORT.md
+  Step 3: STOP the pipeline cleanly
+  Step 4: Alert human with full context (see Escalation Format below)
 ---
 
 ## RESUMPTION PROTOCOL

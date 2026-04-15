@@ -59,3 +59,28 @@ jobs:
         run: |
           echo "✅ All pipeline checks passed"
           echo "Ready for human review and merge approval"
+capture-failure-context:
+    needs: [dbt-compile-check, sql-policy-scan]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Capture logs
+        run: |
+          if [ -f logs/dbt.log ]; then
+            cat logs/dbt.log > failure_context.txt
+          else
+            echo "No dbt.log found" > failure_context.txt
+          fi
+          if [ -f logs/execution_log.md ]; then
+            echo "--- EXECUTION LOG ---" >> failure_context.txt
+            cat logs/execution_log.md >> failure_context.txt
+          fi
+          echo "--- RECENT GIT DIFF ---" >> failure_context.txt
+          git diff HEAD~1 HEAD --stat >> failure_context.txt 2>/dev/null || true
+      - name: Upload failure context
+        uses: actions/upload-artifact@v3
+        with:
+          name: failure-context-${{ github.run_id }}
+          path: failure_context.txt
+          retention-days: 7
