@@ -395,7 +395,22 @@ validated in Databricks before the Gold PR opens for review.
    [TIMESTAMP] | PHASE 12 | pipeline-ops-writer | COMPLETE | intelligence_layer: [N] tables | second_brain: [N] tables
 
 ---
+## PHASE 13 — GENERATE HEALTH DASHBOARD
 
+1. Invoke dashboard-report-agent
+2. Trigger: After Phase 12 pipeline-ops-writer completes
+3. Agent reads intelligence_layer tables from Databricks and writes:
+   .agent/artifacts/PIPELINE_HEALTH_REPORT.md
+   .agent/artifacts/PIPELINE_HEALTH_DASHBOARD.html
+4. Write to logs/execution_log.md:
+   [TIMESTAMP] | PHASE 13 | dashboard-report-agent | COMPLETE | dashboard generated
+
+5. Output to terminal:
+   📊 Health Report:  .agent/artifacts/PIPELINE_HEALTH_REPORT.md
+   🌐 HTML Dashboard: .agent/artifacts/PIPELINE_HEALTH_DASHBOARD.html
+   ✅ PIPELINE FACTORY COMPLETE — all 13 phases done
+
+----
 ## ESCALATION FORMAT
 
 When all orchestrator strategies are exhausted:
