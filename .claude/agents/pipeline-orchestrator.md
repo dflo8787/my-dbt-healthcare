@@ -383,6 +383,17 @@ validated in Databricks before the Gold PR opens for review.
    🏥 Overall Health: [🟢 HEALTHY | 🟡 WARNING | 🔴 CRITICAL]
 
 ---
+### Phase 11b — Send Notification (if WARNING or CRITICAL)
+Invoke: notification-agent
+Trigger: After Phase 11 pipeline-intelligence-manager completes
+Action: Agent reads DAILY_EXECUTIVE_BRIEF.md and checks overall_health
+        HEALTHY  → agent logs SKIPPED — no email sent
+        WARNING  → agent sends email via n8n webhook with summary
+        CRITICAL → agent sends email immediately with P0/P1 details
+Output: logs/execution_log.md entry — SKIPPED or COMPLETE
+Note:   If notification send fails → log WARN and continue to Phase 12
+        Never stop the pipeline for a notification failure
+---
 
 ## PHASE 12 — WRITE TO DATABRICKS (Intelligence + Second Brain)
 

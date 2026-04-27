@@ -151,7 +151,32 @@ Health status is updated manually after each significant pipeline run.
 | Capabilities | Query Databricks intelligence_layer via MCP, write HTML report to .agent/artifacts/ |
 | Cannot Do | Modify pipeline files, write to Bronze/Silver/Gold, run dbt |
 | Phase | Phase 13 |
+---
+### notification-agent
+| Field | Value |
+|---|---|
+| File | .claude/agents/notification-agent.md |
+| Model | Claude Sonnet |
+| Version | 1.0 |
+| Status | HEALTHY |
+| Last Updated | April 2026 |
+| Role | Phase 11b — reads DAILY_EXECUTIVE_BRIEF.md and sends email via n8n webhook on WARNING or CRITICAL |
+| Capabilities | Read DAILY_EXECUTIVE_BRIEF.md, POST to n8n webhook, write to execution_log.md |
+| Cannot Do | Modify pipeline files, write to Databricks, run dbt, block pipeline on failure |
+| Phase | Phase 11b — between Phase 11 and Phase 12 |
 
+### pipeline-reviewer-agent
+| Field | Value |
+|---|---|
+| File | .claude/agents/pipeline-reviewer-agent.md |
+| Model | Claude Opus |
+| Version | 1.0 |
+| Status | HEALTHY |
+| Last Updated | April 2026 |
+| Role | Monthly deep review of all intelligence_layer history — patterns, cost trends, strategic recommendations |
+| Capabilities | Query all 17 Databricks tables, read FAILURE_PLAYBOOK.md, write memory/monthly-reviews/, insert to second_brain |
+| Cannot Do | Modify .sql files, run dbt, commit to git, modify agent files |
+| Phase | On-demand or n8n trigger on 1st of month |
 ---
 
 ## Health Status Definitions
@@ -179,3 +204,5 @@ Health status is updated manually after each significant pipeline run.
 | pipeline-ops-writer | 1.0 → 1.1 | April 2026 | Split into intelligence_layer + second_brain |
 | root-cause-tracer | — → 1.0 | April 2026 | New agent — Section 7 |
 | dashboard-report-agent | — → 1.0 | April 2026 | New agent — Section 8 |
+| notification-agent | — → 1.0 | April 2026 | New agent — Section 9 |
+| pipeline-reviewer-agent | — → 1.0 | April 2026 | New agent — Section 10 |

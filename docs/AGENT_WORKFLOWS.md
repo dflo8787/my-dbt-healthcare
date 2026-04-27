@@ -46,3 +46,17 @@ Type in Claude Code terminal:
 Use the pipeline-ops-writer agent to read all current artifacts and write to li_ws.intelligence_layer and li_ws.second_brain tables in Databricks
 
 Output: 17 Databricks tables updated
+
+## Workflow 8: Monthly Pipeline Review
+Type in Claude Code terminal:
+Use the pipeline-reviewer-agent to perform a deep review of all pipeline history and generate the monthly review with strategic recommendations
+
+Output: memory/monthly-reviews/[YYYY-MM]-pipeline-review.md
+
+When to run: Manually on the 1st of every month
+
+## Workflow 9: Manual Notification Test
+Type in Claude Code terminal:
+Use the notification-agent to read the current DAILY_EXECUTIVE_BRIEF.md and send notification if health is WARNING or CRITICAL
+
+Output: Email via n8n webhook if WARNING or CRITICAL — SKIPPED log entry if HEALTHY
