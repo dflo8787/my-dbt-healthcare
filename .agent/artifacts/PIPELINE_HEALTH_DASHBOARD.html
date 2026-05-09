@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline Health Dashboard - 2026-04-15</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; padding: 24px; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+  .header h1 { font-size: 28px; font-weight: 700; color: #f8fafc; }
+  .header .meta { text-align: right; font-size: 14px; color: #94a3b8; }
+  .health-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-weight: 700; font-size: 14px; }
+  .health-healthy { background: #166534; color: #4ade80; }
+  .health-warning { background: #854d0e; color: #facc15; }
+  .health-critical { background: #991b1b; color: #f87171; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .card { background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; }
+  .card .label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 8px; }
+  .card .value { font-size: 32px; font-weight: 700; }
+  .card .value.green { color: #4ade80; }
+  .card .value.yellow { color: #facc15; }
+  .card .value.blue { color: #60a5fa; }
+  .card .value.purple { color: #a78bfa; }
+  .card .sub { font-size: 12px; color: #64748b; margin-top: 4px; }
+  .section { margin-bottom: 32px; }
+  .section h2 { font-size: 18px; font-weight: 600; color: #f1f5f9; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #334155; }
+  table { width: 100%; border-collapse: collapse; background: #1e293b; border-radius: 8px; overflow: hidden; }
+  th { background: #334155; text-align: left; padding: 12px 16px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; font-weight: 600; }
+  td { padding: 10px 16px; border-bottom: 1px solid #334155; font-size: 14px; }
+  tr:last-child td { border-bottom: none; }
+  .status-complete { color: #4ade80; font-weight: 600; }
+  .status-approved { color: #60a5fa; font-weight: 600; }
+  .status-skipped { color: #94a3b8; font-weight: 600; }
+  .status-pass { color: #4ade80; }
+  .status-warn { color: #facc15; }
+  .status-fail { color: #f87171; }
+  .bar-container { display: flex; align-items: center; gap: 8px; }
+  .bar { height: 8px; border-radius: 4px; }
+  .bar-pass { background: #4ade80; }
+  .bar-warn { background: #facc15; }
+  .bar-fail { background: #f87171; }
+  .tier-badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; margin: 2px; }
+  .tier-a, .tier-excellent, .tier-low { background: #166534; color: #4ade80; }
+  .tier-b, .tier-good, .tier-medium { background: #1e40af; color: #60a5fa; }
+  .tier-c, .tier-needs_review, .tier-high { background: #854d0e; color: #facc15; }
+  .tier-d { background: #991b1b; color: #f87171; }
+  .footer { text-align: center; color: #64748b; font-size: 12px; padding-top: 24px; border-top: 1px solid #334155; }
+  .trend-table td { font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Pipeline Health Dashboard</h1>
+    <span class="health-badge health-healthy">HEALTHY</span>
+  </div>
+  <div class="meta">
+    <div><strong>Run 4</strong> | 2026-04-15</div>
+    <div>run4-gold-2026-04-15</div>
+    <div>Gold Layer APPROVED</div>
+  </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="grid">
+  <div class="card">
+    <div class="label">Models Deployed</div>
+    <div class="value green">10</div>
+    <div class="sub">7 Silver + 3 Gold</div>
+  </div>
+  <div class="card">
+    <div class="label">Tests Passed</div>
+    <div class="value green">110</div>
+    <div class="sub">of 115 total (23 warn, 0 error)</div>
+  </div>
+  <div class="card">
+    <div class="label">dbt Run Time</div>
+    <div class="value blue">10.3s</div>
+    <div class="sub">Silver 4.27s + Gold 6.02s</div>
+  </div>
+  <div class="card">
+    <div class="label">Retries / Escalations</div>
+    <div class="value green">0 / 0</div>
+    <div class="sub">Clean execution</div>
+  </div>
+  <div class="card">
+    <div class="label">Bronze Rows</div>
+    <div class="value purple">1,752</div>
+    <div class="sub">7 source tables</div>
+  </div>
+  <div class="card">
+    <div class="label">Gold Rows</div>
+    <div class="value purple">80</div>
+    <div class="sub">3 report tables</div>
+  </div>
+</div>
+
+<!-- Phase Execution -->
+<div class="section">
+  <h2>Phase Execution</h2>
+  <table>
+    <thead><tr><th>Phase</th><th>Agent</th><th>Status</th><th>Details</th></tr></thead>
+    <tbody>
+      <tr><td>1 - Read & Understand</td><td>orchestrator</td><td class="status-complete">COMPLETE</td><td>7 Bronze tables, existing models verified</td></tr>
+      <tr><td>2 - Bronze Scan</td><td>data-quality-scanner</td><td class="status-complete">COMPLETE</td><td>74 pass, 23 warn, 0 error</td></tr>
+      <tr><td>3 - Plan</td><td>orchestrator</td><td class="status-complete">COMPLETE</td><td>7 silver, 3 gold, 0 excluded</td></tr>
+      <tr><td>4 - Silver Build</td><td>dbt-modeler</td><td class="status-complete">COMPLETE</td><td>compile: 0 errors</td></tr>
+      <tr><td>5 - Silver Validate</td><td>data-quality-scanner</td><td class="status-complete">COMPLETE</td><td>92 pass, 23 warn, 0 error</td></tr>
+      <tr><td>6 - Gate Check</td><td>gate</td><td class="status-complete">COMPLETE</td><td>All hard gates passed</td></tr>
+      <tr><td>7 - Silver Run</td><td>dbt-runner</td><td class="status-complete">COMPLETE</td><td>7/7 models OK (4.27s)</td></tr>
+      <tr><td>9 - Gold Approve</td><td>orchestrator</td><td class="status-approved">APPROVED</td><td>Gold approved by user</td></tr>
+      <tr><td>10 - Gold Run</td><td>dbt-runner</td><td class="status-complete">COMPLETE</td><td>3/3 models OK (6.02s), 18 tests pass</td></tr>
+      <tr><td>11 - Git Workflow</td><td>git-workflow-agent</td><td class="status-skipped">SKIPPED</td><td>Already committed from Run 3</td></tr>
+      <tr><td>12 - Ops Writer</td><td>pipeline-ops-writer</td><td class="status-complete">COMPLETE</td><td>4 tables, 16 rows to Databricks</td></tr>
+      <tr><td>13 - Dashboard</td><td>dashboard-report-agent</td><td class="status-complete">COMPLETE</td><td>This dashboard</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Test Results Bar -->
+<div class="section">
+  <h2>Test Results (115 Total)</h2>
+  <div class="bar-container" style="margin-bottom: 12px;">
+    <div class="bar bar-pass" style="width: calc(92 / 115 * 100%); min-width: 40px;">92</div>
+    <div class="bar bar-warn" style="width: calc(23 / 115 * 100%); min-width: 30px;">23</div>
+  </div>
+  <div style="display: flex; gap: 24px; font-size: 14px; margin-bottom: 16px;">
+    <span><span class="status-pass">92 PASS</span> (Silver)</span>
+    <span><span class="status-pass">18 PASS</span> (Gold)</span>
+    <span><span class="status-warn">23 WARN</span> (Bronze source, non-blocking)</span>
+    <span><span class="status-fail">0 ERROR</span></span>
+  </div>
+</div>
+
+<!-- Gold Layer Detail -->
+<div class="section">
+  <h2>Gold Layer (Approved & Live)</h2>
+  <table>
+    <thead><tr><th>Model</th><th>Rows</th><th>Key Metric</th><th>Tier Distribution</th><th>Tests</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>gold_patient_readmission_summary</td>
+        <td>23</td>
+        <td>risk_tier</td>
+        <td>
+          <span class="tier-badge tier-high">HIGH</span>
+          <span class="tier-badge tier-medium">MEDIUM</span>
+          <span class="tier-badge tier-low">LOW</span>
+        </td>
+        <td class="status-pass">6/6 PASS</td>
+      </tr>
+      <tr>
+        <td>gold_provider_performance</td>
+        <td>50</td>
+        <td>performance_tier</td>
+        <td>
+          <span class="tier-badge tier-excellent">EXCELLENT</span>
+          <span class="tier-badge tier-good">GOOD</span>
+          <span class="tier-badge tier-needs_review">NEEDS REVIEW</span>
+        </td>
+        <td class="status-pass">6/6 PASS</td>
+      </tr>
+      <tr>
+        <td>gold_hospital_quality_scorecard</td>
+        <td>7</td>
+        <td>quality_tier</td>
+        <td>
+          <span class="tier-badge tier-a">A</span>
+          <span class="tier-badge tier-b">B</span>
+          <span class="tier-badge tier-c">C</span>
+          <span class="tier-badge tier-d">D</span>
+        </td>
+        <td class="status-pass">6/6 PASS</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Silver Layer -->
+<div class="section">
+  <h2>Silver Layer (7 Staging Views)</h2>
+  <table>
+    <thead><tr><th>Model</th><th>Rows</th><th>Bad Data Fixes</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>stg_patients</td><td>233</td><td>Null PK filtered, UPPER(insurance_type)</td><td class="status-pass">PASS</td></tr>
+      <tr><td>stg_providers</td><td>50</td><td>Timestamp added</td><td class="status-pass">PASS</td></tr>
+      <tr><td>stg_encounters</td><td>503</td><td>ROW_NUMBER dedup</td><td class="status-pass">PASS</td></tr>
+      <tr><td>stg_medical_claims</td><td>530</td><td>TRY_CAST financials</td><td class="status-pass">PASS</td></tr>
+      <tr><td>stg_medications</td><td>400</td><td>Timestamp added</td><td class="status-pass">PASS</td></tr>
+      <tr><td>stg_hospital_master</td><td>7</td><td>Timestamp added</td><td class="status-pass">PASS</td></tr>
+      <tr><td>stg_patient_outcomes</td><td>23</td><td>Null PK, normalize rates, null dates</td><td class="status-pass">PASS</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Trend -->
+<div class="section">
+  <h2>Run History (Last 3 Runs)</h2>
+  <table class="trend-table">
+    <thead><tr><th>Run</th><th>Date</th><th>Models</th><th>Pass</th><th>Warn</th><th>Fail</th><th>Health</th></tr></thead>
+    <tbody>
+      <tr><td>Run 2</td><td>2026-04-14</td><td>7</td><td>87</td><td>10</td><td>0</td><td><span class="health-badge health-healthy" style="font-size:11px;padding:2px 10px;">HEALTHY</span></td></tr>
+      <tr><td>Run 3</td><td>2026-04-14</td><td>10</td><td>92</td><td>23</td><td>0</td><td><span class="health-badge health-healthy" style="font-size:11px;padding:2px 10px;">HEALTHY</span></td></tr>
+      <tr><td>Run 4</td><td>2026-04-15</td><td>10</td><td>110</td><td>23</td><td>0</td><td><span class="health-badge health-healthy" style="font-size:11px;padding:2px 10px;">HEALTHY</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Open Items -->
+<div class="section">
+  <h2>Open Items for Human Review</h2>
+  <table>
+    <thead><tr><th>Priority</th><th>Item</th><th>Action</th></tr></thead>
+    <tbody>
+      <tr><td><span class="status-warn">P2</span></td><td>hospital_id FK namespace mismatch</td><td>Investigate format difference across 4 referencing tables</td></tr>
+      <tr><td><span class="status-warn">P2</span></td><td>Stale example/ models</td><td>Remove my_first_dbt_model and my_second_dbt_model</td></tr>
+      <tr><td style="color:#94a3b8;">P3</td><td>Enum accepted_values gaps</td><td>Expand lists for insurance_type, encounter_type, adherence_flag</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Databricks Writes -->
+<div class="section">
+  <h2>Intelligence Layer Writes (Phase 12)</h2>
+  <table>
+    <thead><tr><th>Schema</th><th>Table</th><th>Rows Written</th></tr></thead>
+    <tbody>
+      <tr><td>li_ws.intelligence_layer</td><td>execution_log</td><td>11</td></tr>
+      <tr><td>li_ws.intelligence_layer</td><td>pipeline_analytics</td><td>1</td></tr>
+      <tr><td>li_ws.intelligence_layer</td><td>dbt_run_log</td><td>3</td></tr>
+      <tr><td>li_ws.second_brain</td><td>pipeline_memory</td><td>1</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="footer">
+  Pipeline Health Dashboard | Generated by dashboard-report-agent | Phase 13 | 2026-04-15 | Run ID: run4-gold-2026-04-15
+</div>
+
+</body>
+</html>

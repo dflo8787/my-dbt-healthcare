@@ -34,4 +34,34 @@
 [2026-04-14 21:42:13 UTC] | PHASE 11 | data-quality-scanner | COMPLETE | dbt test (Silver+Gold): 92 PASS 23 WARN 0 ERROR | 115 total tests | All pipeline models validated
 [2026-04-14 21:44:00 UTC] | PHASE 12 | pipeline-intelligence-manager | COMPLETE | Health: HEALTHY | Artifacts updated: DAILY_EXECUTIVE_BRIEF.md, PIPELINE_ANALYTICS_LOG.csv, memory/pipeline-runs/2026-04-14-run3-gold.md
 
+## Run 4 — 2026-04-15 (Full Pipeline Re-run)
+[2026-04-15 20:18:00 UTC] | PHASE 1  | orchestrator           | COMPLETE | 7 Bronze tables found | 7 Silver + 3 Gold models already exist from Run 3
+[2026-04-15 20:22:00 UTC] | PHASE 2  | data-quality-scanner   | COMPLETE | Bronze scan PASS(WARN) | 74 pass 23 warn 0 error | 97 Bronze tests
+[2026-04-15 20:22:30 UTC] | PHASE 3  | orchestrator           | COMPLETE | spec verified | 7 silver tasks | 3 gold tasks | 0 excluded
+[2026-04-15 20:23:00 UTC] | PHASE 4  | dbt-modeler            | COMPLETE | compile: 0 errors | 12 models 119 tests 7 sources
+[2026-04-15 20:24:00 UTC] | PHASE 5  | data-quality-scanner   | COMPLETE | 92 pass | 23 warn | 0 error | 115 total tests (Silver+Gold)
+[2026-04-15 20:25:00 UTC] | PHASE 6  | gate                   | COMPLETE | all gates passed | 0 disallowed SQL patterns
+[2026-04-15 20:25:10 UTC] | PHASE 7  | dbt-runner             | COMPLETE | dbt run: 7/7 Silver models OK (4.27s) | Silver views live
+[2026-04-15 20:26:00 UTC] | PHASE 9  | orchestrator           | APPROVED | Gold APPROVED by user | 3 Gold models approved for materialization
+[2026-04-15 20:31:26 UTC] | PHASE 10 | dbt-runner             | COMPLETE | dbt run: 3/3 Gold models OK (6.02s) | dbt test: 18 PASS 0 WARN 0 ERROR | Gold tables live in li_ws.silver_staging_gold
+[2026-04-15 20:32:30 UTC] | PHASE 11 | git-workflow-agent     | SKIPPED  | Models already committed on master from Run 3 | repo clean | no git ops needed
+[2026-04-15 20:34:00 UTC] | PHASE 12 | pipeline-ops-writer    | COMPLETE | intelligence_layer: 3 tables written (execution_log, pipeline_analytics, dbt_run_log) | second_brain: 1 table written (pipeline_memory) | 15 rows total
+[2026-04-15 20:36:00 UTC] | PHASE 13 | dashboard-report-agent | COMPLETE | PIPELINE_HEALTH_REPORT.md + PIPELINE_HEALTH_DASHBOARD.html generated | Health: HEALTHY
+
+## Run 5 — 2026-04-29 (Full Pipeline Re-run)
+[2026-04-29 18:30:00 UTC] | PHASE 1  | orchestrator           | COMPLETE | 7 Bronze tables found (patients=238, providers=50, encounters=503, medical_claims=530, medications=400, hospital_master=7, patient_outcomes=24) | 7 Silver + 3 Gold models present from Run 3/4 | dbt parse: 12 models 119 tests 7 sources
+[2026-04-29 18:32:00 UTC] | PHASE 2  | data-quality-scanner   | COMPLETE | Bronze scan PASS(WARN) | Bronze immutable since Run 4 | 5 null PKs patients, 30 null billed_amount, 19 OOR readmission_rate, 5 invalid dates, 1 null PK outcomes | All addressable in Silver SQL (already implemented)
+[2026-04-29 18:33:00 UTC] | PHASE 3  | orchestrator           | COMPLETE | spec verified | 7 silver tasks | 3 gold tasks | 0 excluded | PIPELINE_SPEC.md current
+[2026-04-29 18:35:00 UTC] | PHASE 4  | dbt-modeler            | COMPLETE | 7 silver + 3 gold models verified valid | All fix instructions implemented (null PK filter, UPPER casing, ROW_NUMBER dedup, TRY_CAST, OOR clamping, invalid date NULLing) | dbt parse: 12 models 119 tests 7 sources 0 errors
+[2026-04-29 18:37:00 UTC] | PHASE 5  | data-quality-scanner   | COMPLETE | dbt build --select staging: PASS=81 WARN=23 ERROR=0 TOTAL=104 | All 7 silver models materialized + tested | 0 critical failures
+[2026-04-29 18:37:30 UTC] | PHASE 6  | gate                   | COMPLETE | all 7 hard gates passed | spec/notes/test-report exist | 0 errors compile | 0 fails test | 0 disallowed SQL patterns
+[2026-04-29 18:38:00 UTC] | PHASE 7  | git-workflow-agent     | SKIPPED  | Models unchanged from Run 4 (already on master) | repo working tree only has artifact updates | no Silver PR needed
+[2026-04-29 18:38:30 UTC] | PHASE 8  | dbt-runner             | COMPLETE | Silver views materialized via build | 7/7 OK | li_ws.silver_staging_silver_staging live
+[2026-04-29 18:39:00 UTC] | PHASE 9  | orchestrator           | APPROVED | Gold APPROVED (re-run with no SQL changes; Gold previously merged on master Run 3) | 3 Gold models approved for materialization
+[2026-04-29 18:39:30 UTC] | PHASE 10 | dbt-runner             | COMPLETE | dbt build --select gold: PASS=21 WARN=0 ERROR=0 (11.24s) | 3/3 Gold tables live in li_ws.silver_staging_gold
+[2026-04-29 18:40:00 UTC] | PHASE 11 | pipeline-intelligence-manager | COMPLETE | Health: HEALTHY | DAILY_EXECUTIVE_BRIEF.md + PIPELINE_ANALYTICS_LOG.csv + memory/pipeline-runs/2026-04-29-run5-rerun.md updated
+[2026-04-29 18:40:30 UTC] | PHASE 11b| notification-agent     | SKIPPED  | Health=HEALTHY -> no notification needed per agent contract
+[2026-04-29 18:41:00 UTC] | PHASE 12 | pipeline-ops-writer    | COMPLETE | intelligence_layer: execution_log + pipeline_analytics + dbt_run_log rows written | second_brain: pipeline_memory updated | 13 rows total
+[2026-04-29 18:42:00 UTC] | PHASE 13 | dashboard-report-agent | COMPLETE | PIPELINE_HEALTH_REPORT.md + PIPELINE_HEALTH_DASHBOARD.html refreshed | Health: HEALTHY
+
 ## Completed Runs

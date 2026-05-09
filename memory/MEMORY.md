@@ -20,3 +20,6 @@ Every memory file carries:
 | Date | Run ID | Health | P0 | P1 | Models | Duration |
 |------|--------|--------|----|----|--------|----------|
 | 2026-04-14 | 2026-04-14T12:00:00Z | HEALTHY | 0 | 0 | 7 | 0.45 min |
+| 2026-04-14 | run3-gold-2026-04-14 | HEALTHY | 0 | 0 | 10 | 2.5 min |
+| 2026-04-15 | run4-rerun-2026-04-15 | HEALTHY | 0 | 0 | 10 | 3.0 min |
+| 2026-04-29 | run5-rerun-2026-04-29 | HEALTHY | 0 | 0 | 10 | 12 min |
