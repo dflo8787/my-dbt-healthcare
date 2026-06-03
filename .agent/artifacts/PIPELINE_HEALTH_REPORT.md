@@ -1,38 +1,51 @@
 # Pipeline Health Report
 
-**Date:** 2026-04-29
-**Run ID:** run5-rerun-2026-04-29
+**Date:** 2026-06-03
+**Run ID:** run7-member-enrollment-2026-06-03
 **Overall Health:** HEALTHY
-**Pipeline Version:** Run 5 (Full 13-phase re-run)
+**Pipeline Version:** Run 7 (Member Enrollment — NEW Silver + Gold + mask_pii macro; Gold approved + materialized)
 
 ---
 
 ## Executive Summary
 
-Full pipeline re-run completed successfully. 7 Silver staging views and 3 Gold tables re-materialized in Databricks. Silver build: PASS=81 WARN=23 ERROR=0. Gold build: PASS=21 WARN=0 ERROR=0. Combined: 102 PASS, 23 WARN, 0 ERROR across 125 tests. The 23 warnings remain at severity:warn level -- all are known Bronze source data quality issues handled defensively in Silver SQL. Zero retries, zero escalations, zero errors. No PRs opened (SQL unchanged from master). Phase 9 Gold gate auto-approved due to no SQL changes.
+Run 7 shipped a genuinely new feature end-to-end: onboarding the Bronze source
+`li_ws.bronze.member_enrollment` (50 rows) into a PII-safe Silver staging model and a
+PII-free Gold aggregate for the AI/ML & Knowledge Management team, plus a reusable
+`mask_pii` macro. The human reviewed the Phase 9 Gold approval context and explicitly
+APPROVED. Per human direction, no separate Gold PR was opened — the Gold code already
+lives on the Silver PR #7 branch, so Gold was materialized directly from that branch.
+
+Gold materialized first-attempt: `gold_member_risk_summary` is a TABLE in
+`li_ws.silver_staging_gold` with **49 rows** (state x plan_type x risk_tier grain).
+Combined Phase 10 build: PASS=25, WARN=0, ERROR=0, FAIL=0. The Gold table is confirmed
+PII-free (8 columns, none being member_id/ssn/email/phone/name/dob). The doubled-name
+schema convention (silver_staging_silver_staging / silver_staging_gold) was retained
+exactly as-is per explicit human instruction.
 
 ---
 
 ## Phase Execution Summary
 
-| Phase | Agent | Status | Duration | Details |
-|-------|-------|--------|----------|---------|
-| 1 - Read & Understand | orchestrator | COMPLETE | -- | 7 Bronze tables, 7 Silver + 3 Gold models verified |
-| 2 - Bronze Scan | data-quality-scanner | COMPLETE | -- | PASS(WARN): 74 pass, 23 warn, 0 error |
-| 3 - Plan | orchestrator | COMPLETE | -- | Spec verified: 7 silver, 3 gold, 0 excluded |
-| 4 - Silver Build | dbt-modeler | COMPLETE | -- | compile: 0 errors, 12 models, 119 tests, 7 sources |
-| 5 - Silver Validate | data-quality-scanner | COMPLETE | -- | 92 pass, 23 warn, 0 error (115 total) |
-| 6 - Gate Check | gate | COMPLETE | -- | All hard gates passed |
-| 7 - Silver Run | dbt-runner | COMPLETE | 4.27s | 7/7 Silver models OK |
-| 9 - Gold Approve | orchestrator | APPROVED | -- | Gold approved by user |
-| 10 - Gold Run | dbt-runner | COMPLETE | 6.02s | 3/3 Gold models OK, 18/18 tests pass |
-| 11 - Git Workflow | git-workflow-agent | SKIPPED | -- | Models already committed from Run 3 |
-| 12 - Ops Writer | pipeline-ops-writer | COMPLETE | -- | 4 Databricks tables written, 15 rows |
-| 13 - Dashboard | dashboard-report-agent | COMPLETE | -- | This report |
+| Phase | Agent | Status | Details |
+|-------|-------|--------|---------|
+| 1 - Read & Understand | orchestrator | COMPLETE | Bronze member_enrollment verified (50 rows); macros/ empty |
+| 2 - Bronze Scan | data-quality-scanner | COMPLETE | PASS; 3 PII to mask, 3 PII to drop |
+| 3 - Plan | orchestrator | COMPLETE | 1 new silver + 1 new gold task |
+| 4 - Silver Build | dbt-modeler | COMPLETE | mask_pii macro + stg + gold; compile 0 errors |
+| 5 - Silver Validate | data-quality-scanner | COMPLETE | PASS=14 (after STRATEGY 1 regex fix) |
+| 6 - Gate Check | gate | COMPLETE | All hard gates passed |
+| 7 - Git Workflow | git-workflow-agent | COMPLETE | Real Silver PR #7 opened |
+| 8 - Silver Run | dbt-runner | COMPLETE | stg_member_enrollment live (50 rows) |
+| 9 - Gold Approve | orchestrator | APPROVED | Human explicitly approved Gold |
+| 10 - Gold Run | dbt-runner | COMPLETE (21.66s) | gold_member_risk_summary live, 49 rows, 9/9 tests pass |
+| 11 - Intelligence | pipeline-intelligence-manager | COMPLETE | Health HEALTHY; brief + analytics + memory updated |
+| 11b - Notification | notification-agent | SKIPPED | Health=HEALTHY -> no notification |
+| 12 - Ops Writer | pipeline-ops-writer | COMPLETE | 14 rows to intelligence_layer + second_brain |
+| 13 - Dashboard | dashboard-report-agent | COMPLETE | This report + HTML dashboard |
 
-**Total Phases Completed:** 12 of 13 (1 skipped intentionally)
-**Total dbt Execution Time:** ~10.29 seconds (Silver 4.27s + Gold 6.02s)
-**Retries:** 0
+**Total dbt Gold+Silver Build Time (Phase 10):** 21.66s
+**Retries (Phase 10 continuation):** 0
 **Escalations:** 0
 
 ---
@@ -43,41 +56,29 @@ Full pipeline re-run completed successfully. 7 Silver staging views and 3 Gold t
 
 | Table | Row Count | PK Integrity | Known Issues |
 |-------|-----------|-------------|--------------|
-| patients | 238 | 97.9% (5 null PKs) | Mixed casing in insurance_type |
-| providers | 50 | 100% | hospital_id FK mismatch |
-| encounters | 503 | 100% | hospital_id FK mismatch, 3 null admit_source |
-| medical_claims | 530 | 100% | 30 null/invalid billed_amount |
-| medications | 400 | 100% | 3 adherence_flag warnings |
-| hospital_master | 7 | 100% | Clean |
-| patient_outcomes | 24 | 95.8% (1 null PK) | 19 OOR readmission_rate, 5 invalid dates |
+| member_enrollment | 50 | 100% (50 distinct PKs, 0 null) | Contains raw PII (ssn/email/phone/first_name/last_name/dob) — handled in Silver |
 
-**Total Bronze Rows:** 1,752
+**This run scanned 1 new Bronze table (member_enrollment). Section 6 Bronze tables untouched.**
 
-### Silver (Staging Views - li_ws.silver_staging_silver_staging)
+### Silver (Staging View - li_ws.silver_staging_silver_staging) — 1 NEW model
 
-| Model | Row Count | Bad Data Fixes Applied | Tests Pass/Warn/Fail |
-|-------|-----------|----------------------|---------------------|
-| stg_patients | 233 | Null PK filtered, UPPER(insurance_type) | Pass |
-| stg_providers | 50 | Timestamp added | Pass |
-| stg_encounters | 503 | ROW_NUMBER dedup on encounter_id | Pass |
-| stg_medical_claims | 530 | TRY_CAST on financial columns | Pass |
-| stg_medications | 400 | Timestamp added | Pass |
-| stg_hospital_master | 7 | Timestamp added | Pass |
-| stg_patient_outcomes | 23 | Null PK filtered, readmission_rate normalized, invalid dates nulled | Pass |
+| Model | Bad Data / PII Fixes Applied | Rows | Tests |
+|-------|-----------------------------|------|-------|
+| stg_member_enrollment | mask_pii on ssn/email/phone (XXX-XX-####, *@***.***, ***-***-####); DROP raw first_name/last_name/dob; add pipeline_load_timestamp | 50 | 14 PASS |
 
-**Total Silver Rows:** 1,746
-**Bad Data Fixes Applied:** 7 distinct transformations
+**PII handling verified at data level. No raw PII columns present in Silver.**
 
-### Gold (Report Tables - li_ws.silver_staging_gold)
+### Gold (Report Table - li_ws.silver_staging_gold) — 1 NEW table materialized this run
 
-| Model | Row Count | Key Column | Tier Distribution | Tests Pass/Warn/Fail |
-|-------|-----------|-----------|-------------------|---------------------|
-| gold_patient_readmission_summary | 23 | risk_tier | HIGH / MEDIUM / LOW | 6/0/0 |
-| gold_provider_performance | 50 | performance_tier | EXCELLENT / GOOD / NEEDS_REVIEW | 6/0/0 |
-| gold_hospital_quality_scorecard | 7 | quality_tier | A / B / C / D | 6/0/0 |
+| Model | Row Count | Grain | Aggregates (actual) | Tests |
+|-------|-----------|-------|---------------------|-------|
+| gold_member_risk_summary | 49 | state x plan_type x risk_tier | 50 members, 42 active, 46 with conditions; 15 states, 9 plans, 4 tiers | 9 PASS |
 
-**Total Gold Rows:** 80
-**Gold Tests:** 18 PASS, 0 WARN, 0 ERROR
+**PII-FREE CONFIRMED** — 8 columns: state, plan_type, risk_tier, member_count, active_members,
+members_with_conditions, pct_with_conditions, pipeline_load_timestamp. No member_id, ssn,
+email, phone, name, or dob.
+
+> The 7 Silver + 3 Gold Section 6 models from prior runs were untouched this run.
 
 ---
 
@@ -85,19 +86,10 @@ Full pipeline re-run completed successfully. 7 Silver staging views and 3 Gold t
 
 | Category | Count |
 |----------|-------|
-| Total Tests Executed | 115 (Silver + Gold) |
-| PASS | 92 (Silver) + 18 (Gold) = 110 |
-| WARN | 23 (all severity:warn, non-blocking) |
-| ERROR | 0 |
-
-### Warning Categories (all known, handled in Silver SQL)
-
-| Category | Count | Root Cause |
-|----------|-------|------------|
-| hospital_id FK mismatches | 7 | Format mismatch between hospital_master and referencing tables |
-| Accepted values mismatches | 4 | encounter_type, insurance_type, adherence_flag enums |
-| Null FKs in Bronze sources | 6 | Known null foreign keys in source data |
-| Not-null Bronze fields | 6 | 5 null patient_ids, 30 null financial fields |
+| Total Tests Executed (Phase 10 build) | 25 (2 model builds + 23 data tests) |
+| PASS | 25 (14 Silver + 9 Gold + 2 builds) |
+| WARN | 0 |
+| ERROR / FAIL | 0 |
 
 ---
 
@@ -105,12 +97,15 @@ Full pipeline re-run completed successfully. 7 Silver staging views and 3 Gold t
 
 | Schema | Table | Rows Written |
 |--------|-------|-------------|
-| intelligence_layer | execution_log | 11 |
+| intelligence_layer | execution_log | 5 |
+| intelligence_layer | dbt_run_log | 2 |
+| intelligence_layer | test_results | 2 |
 | intelligence_layer | pipeline_analytics | 1 |
-| intelligence_layer | dbt_run_log | 3 |
+| intelligence_layer | executive_briefs | 1 |
 | second_brain | pipeline_memory | 1 |
+| second_brain | architecture_decisions | 2 |
 
-**Total:** 4 tables, 16 rows written to Databricks
+**Total:** 7 tables, 14 rows written to Databricks (run_id=run7-member-enrollment-2026-06-03)
 
 ---
 
@@ -118,11 +113,13 @@ Full pipeline re-run completed successfully. 7 Silver staging views and 3 Gold t
 
 | Indicator | Value | Status |
 |-----------|-------|--------|
-| Model Success Rate | 10/10 (100%) | HEALTHY |
-| Test Pass Rate | 110/110 targeted (100%) | HEALTHY |
-| Warning Rate | 23/115 (20%) | ACCEPTABLE (known issues) |
-| Error Rate | 0/115 (0%) | HEALTHY |
-| Retry Count | 0 | HEALTHY |
+| Model Success Rate | 2/2 (100%) | HEALTHY |
+| Gold Materialization | 1/1 table live (49 rows) | HEALTHY |
+| Test Pass Rate | 25/25 (100%) | HEALTHY |
+| Warning Rate | 0/25 (0%) | HEALTHY |
+| Error/Fail Rate | 0/25 (0%) | HEALTHY |
+| PII Leakage (Gold) | 0 PII columns | HEALTHY |
+| Retry Count (Phase 10) | 0 | HEALTHY |
 | Escalation Count | 0 | HEALTHY |
 | Gold Approval | APPROVED | HEALTHY |
 | Gate Check | All passed | HEALTHY |
@@ -131,15 +128,18 @@ Full pipeline re-run completed successfully. 7 Silver staging views and 3 Gold t
 
 ---
 
-## Trend (Last 3 Runs)
+## Trend (Last 4 Runs)
 
 | Run | Date | Models | Tests Pass | Tests Warn | Tests Fail | Health |
 |-----|------|--------|-----------|-----------|-----------|--------|
-| Run 2 | 2026-04-14 | 7 | 87 | 10 | 0 | HEALTHY |
-| Run 3 | 2026-04-14 | 10 | 92 | 23 | 0 | HEALTHY |
 | Run 4 | 2026-04-15 | 10 | 110 | 23 | 0 | HEALTHY |
+| Run 5 | 2026-04-29 | 10 | 102 | 23 | 0 | HEALTHY |
+| Run 6 | 2026-06-03 | 10 | 102 | 23 | 0 | HEALTHY (recovered from P0 infra) |
+| Run 7 | 2026-06-03 | 2  | 23  | 0  | 0 | HEALTHY (new PII-masked feature) |
 
-**Trend:** Stable. Test coverage increased from 87 to 110 as Gold models added. Warning count stabilized at 23 (all Bronze source issues). Zero failures across all runs.
+**Trend:** Stable. Zero test failures across all runs. Run 7 added the first PII-masking
+pipeline pattern (mask_pii macro + drop-raw-PII strategy) and a PII-free Gold aggregate,
+shipped cleanly with 0 warnings and 0 failures.
 
 ---
 
@@ -147,10 +147,10 @@ Full pipeline re-run completed successfully. 7 Silver staging views and 3 Gold t
 
 | Priority | Item | Action |
 |----------|------|--------|
-| P2 | hospital_id FK namespace mismatch | Investigate format difference between hospital_master and 4 referencing tables |
-| P2 | Stale example/ models | Consider removing my_first_dbt_model and my_second_dbt_model |
-| P3 | Expand accepted_values for enum columns | insurance_type, encounter_type, adherence_flag have unlisted values |
+| P2 | PR #7 not yet merged to master | Merge https://github.com/dflo8787/my-dbt-healthcare/pull/7 to persist mask_pii macro + stg_member_enrollment + gold_member_risk_summary on master |
+| P3 | Reusable PII pattern captured | mask_pii macro is now available for future PII sources (see second_brain.architecture_decisions ADR-run7-001) |
+| P3 | Schema naming convention | Doubled-name schemas retained per human decision (ADR-run7-002) — no action |
 
 ---
 
-*Generated by dashboard-report-agent | Phase 13 | 2026-04-15*
+*Generated by dashboard-report-agent | Phase 13 | 2026-06-03*
