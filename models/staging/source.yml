@@ -696,3 +696,52 @@ sources:
             description: Date the medication record was created in the source system.
             data_tests:
               - not_null
+
+      - name: member_enrollment
+        description: >
+          Member enrollment reference table for the health plan. One row per member.
+          Contains member-level PII (ssn, email, phone, first_name, last_name, dob)
+          that MUST be masked or dropped before leaving the Bronze layer. Also carries
+          non-sensitive enrollment attributes (state, plan_type, risk_tier, chronic
+          conditions, enrollment/last-visit dates, active flag) used for the PII-free
+          Gold risk summary.
+        columns:
+          - name: member_id
+            description: Primary key for the member (e.g. M-00001). Uniquely identifies a member.
+            data_tests:
+              - not_null
+              - unique
+          - name: first_name
+            description: Member given name — PII. Dropped in Silver (no mask strategy).
+          - name: last_name
+            description: Member family name — PII. Dropped in Silver (no mask strategy).
+          - name: ssn
+            description: Member Social Security Number — PII. Masked in Silver (XXX-XX-####).
+          - name: email
+            description: Member email address — PII. Masked in Silver (*@***.***).
+          - name: phone
+            description: Member phone number — PII. Masked in Silver (***-***-####).
+          - name: dob
+            description: Member date of birth — PII. Dropped in Silver (no mask strategy).
+          - name: state
+            description: Two-letter US state abbreviation for the member's residence.
+          - name: enrollment_date
+            description: Date the member enrolled in the plan.
+          - name: plan_type
+            description: Enrollment plan type (e.g. Medicaid, Commercial HMO, CHIP, Dual Eligible).
+          - name: primary_provider_id
+            description: Foreign key to the member's primary care provider.
+          - name: chronic_conditions
+            description: >
+              Semicolon-delimited list of chronic conditions, the literal 'None',
+              or NULL when no conditions are recorded.
+          - name: risk_tier
+            description: >
+              Member clinical risk tier.
+              Known values: Low, Medium, High, Critical.
+          - name: last_visit_date
+            description: Date of the member's most recent visit.
+          - name: active_flag
+            description: >
+              Indicates whether the member's enrollment is currently active.
+              Known values: Y, N.
