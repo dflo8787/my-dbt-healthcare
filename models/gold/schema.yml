@@ -120,3 +120,49 @@ models:
         description: Timestamp when the pipeline loaded this row.
         data_tests:
           - not_null
+
+  - name: gold_member_risk_summary
+    description: >
+      PII-free member risk summary for the AI/ML and Knowledge Management team.
+      Aggregated to state x plan_type x risk_tier grain. Contains no member_id and
+      no PII columns of any kind. Sourced from stg_member_enrollment.
+    columns:
+      - name: state
+        description: Two-letter US state abbreviation.
+        data_tests:
+          - not_null
+      - name: plan_type
+        description: Enrollment plan type.
+        data_tests:
+          - not_null
+      - name: risk_tier
+        description: Member clinical risk tier (Low/Medium/High/Critical).
+        data_tests:
+          - not_null
+      - name: member_count
+        description: Count of members in this state/plan/tier group.
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 1
+      - name: active_members
+        description: Count of members with active_flag = 'Y' in this group.
+        data_tests:
+          - not_null
+      - name: members_with_conditions
+        description: >
+          Count of members with at least one recorded chronic condition
+          (excludes NULL, empty string and the literal 'None').
+        data_tests:
+          - not_null
+      - name: pct_with_conditions
+        description: members_with_conditions / member_count (0.0 - 1.0).
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 1
+      - name: pipeline_load_timestamp
+        description: Timestamp when the pipeline loaded this row.
+        data_tests:
+          - not_null

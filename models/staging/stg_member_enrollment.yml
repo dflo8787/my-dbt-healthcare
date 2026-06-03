@@ -1,0 +1,90 @@
+version: 2
+
+models:
+  - name: stg_member_enrollment
+    description: >
+      Silver staging model for member enrollment. PII columns ssn, email and phone
+      are masked via the mask_pii() macro (HIPAA Safe Harbor). Raw first_name,
+      last_name and dob are dropped entirely — no masking strategy exists for them
+      and Gold does not require them. No raw PII is exposed in this model.
+    columns:
+      - name: member_id
+        description: Primary key for the member (e.g. M-00001).
+        data_tests:
+          - not_null
+          - unique
+
+      - name: ssn
+        description: SSN masked to retain only the last 4 digits (XXX-XX-####).
+        meta:
+          pii_mask: ssn
+          sensitivity: high
+        data_tests:
+          - dbt_expectations.expect_column_values_to_match_regex:
+              regex: '^XXX-XX-[0-9]{4}$'
+
+      - name: email
+        description: Email masked to first character of local part only (*@***.***).
+        meta:
+          pii_mask: email
+          sensitivity: high
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_match_regex:
+              regex: '^.@[*][*][*][.][*][*][*]$'
+
+      - name: phone
+        description: Phone masked to retain only the last 4 digits (***-***-####).
+        meta:
+          pii_mask: phone
+          sensitivity: high
+        data_tests:
+          - dbt_expectations.expect_column_values_to_match_regex:
+              regex: '^[*][*][*]-[*][*][*]-[0-9]{4}$'
+
+      - name: state
+        description: Two-letter US state abbreviation for the member's residence.
+        data_tests:
+          - not_null
+
+      - name: enrollment_date
+        description: Date the member enrolled in the plan.
+
+      - name: plan_type
+        description: Enrollment plan type.
+        data_tests:
+          - not_null
+
+      - name: primary_provider_id
+        description: Foreign key to the member's primary care provider.
+
+      - name: chronic_conditions
+        description: Semicolon-delimited chronic conditions, literal 'None', or NULL.
+
+      - name: risk_tier
+        description: Member clinical risk tier.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Low', 'Medium', 'High', 'Critical']
+              config:
+                severity: warn
+
+      - name: last_visit_date
+        description: Date of the member's most recent visit.
+
+      - name: active_flag
+        description: Whether the member's enrollment is currently active (Y/N).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Y', 'N']
+              config:
+                severity: warn
+
+      - name: pipeline_load_timestamp
+        description: Timestamp the Silver row was materialized.
+        data_tests:
+          - not_null
