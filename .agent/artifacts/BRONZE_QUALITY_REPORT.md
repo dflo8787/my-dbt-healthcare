@@ -54,3 +54,48 @@ No fixes needed -- clean data
 
 ## All Tables
 Add pipeline_load_timestamp as last column: current_timestamp() AS pipeline_load_timestamp
+
+---
+
+### FIX-MEMBER_ENROLLMENT-SSN-PII_MASK
+
+- **Table:** member_enrollment
+- **Column:** ssn
+- **Severity:** Critical
+- **Issue:** Column contains PII (SSN format detected by regex `\d{3}-\d{2}-\d{4}`)
+- **Classification:** PII
+- **Sensitivity:** high
+- **pii_type:** ssn
+- **SQL Pattern:** `{{ mask_pii('ssn', 'ssn') }} as ssn`
+- **Test to Add:** `dbt_expectations.expect_column_values_to_match_regex` on ssn against pattern `^XXX-XX-\d{4}$`
+- **Rationale:** HIPAA Safe Harbor compliant — retain last 4 digits only.
+
+---
+
+### FIX-MEMBER_ENROLLMENT-EMAIL-PII_MASK
+
+- **Table:** member_enrollment
+- **Column:** email
+- **Severity:** Critical
+- **Issue:** Column contains PII (email address format)
+- **Classification:** PII
+- **Sensitivity:** high
+- **pii_type:** email
+- **SQL Pattern:** `{{ mask_pii('email', 'email') }} as email`
+- **Test to Add:** `not_null` on email
+- **Rationale:** Retain first character only — supports cohort grouping without exposing identity.
+
+---
+
+### FIX-MEMBER_ENROLLMENT-PHONE-PII_MASK
+
+- **Table:** member_enrollment
+- **Column:** phone
+- **Severity:** Critical
+- **Issue:** Column contains PII (phone number format)
+- **Classification:** PII
+- **Sensitivity:** high
+- **pii_type:** phone
+- **SQL Pattern:** `{{ mask_pii('phone', 'phone') }} as phone`
+- **Test to Add:** `dbt_expectations.expect_column_values_to_match_regex` on phone against pattern `^\*\*\*-\*\*\*-\d{4}$`
+- **Rationale:** Mask area code and exchange, retain line number for cohort grouping.

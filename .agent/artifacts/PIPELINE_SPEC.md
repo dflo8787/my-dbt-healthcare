@@ -87,3 +87,32 @@ No fixes needed beyond adding pipeline_load_timestamp
 - Add not_null + unique tests on Gold PKs
 - Add accepted_values tests on tier columns
 - Add not_null on pipeline_load_timestamp across all models
+
+---
+
+### silver_tasks: member_enrollment
+
+- **Source:** `li_ws.bronze.member_enrollment`
+- **Target:** `li_ws.silver_staging.stg_member_enrollment`
+- **Materialization:** table
+- **Acceptance Criteria:**
+  - All PII fix instructions applied via the `mask_pii()` macro
+  - No raw PII columns present in the Silver output
+  - `schema.yml` tags include `meta.pii_mask` and `meta.sensitivity` for each masked column
+  - Compile passes with zero errors and zero warnings
+  - SSN matches `XXX-XX-####`, email matches `*@***.***`, phone matches `***-***-####`
+- **Notes:** Three PII columns (ssn, email, phone). No Strategy 3 fallback permitted.
+
+---
+
+### gold_tasks: gold_member_risk_summary
+
+- **Source:** `{{ ref('stg_member_enrollment') }}`
+- **Target:** `li_ws.gold.gold_member_risk_summary`
+- **Materialization:** table
+- **Acceptance Criteria:**
+  - PII-free by design — no member_id, no PII columns
+  - Aggregated to state + plan_type + risk_tier grain
+  - Metrics: member_count, active_members, members_with_conditions, pct_with_conditions
+  - No `mask_pii()` calls anywhere
+- **Notes:** Consumer-facing aggregate for AI/ML and Knowledge Management team.
